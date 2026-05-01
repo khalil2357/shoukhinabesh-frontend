@@ -17,7 +17,8 @@ export const Login = () => {
     try {
       const res = await authService.login({ email, password });
       const user = res.data.user;
-      if (user.role === 'VENDOR') navigate('/vendor');
+      if (user.role === 'ADMIN') navigate('/admin');
+      else if (user.role === 'VENDOR') navigate('/vendor');
       else navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');

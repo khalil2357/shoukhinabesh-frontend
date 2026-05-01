@@ -7,6 +7,7 @@ import { ProductDetail } from './pages/ProductDetail';
 import { Login, Register } from './pages/auth/AuthPages';
 import { CustomerDashboard } from './pages/account/CustomerDashboard';
 import { VendorDashboard } from './pages/vendor/VendorDashboard';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { useAuthStore } from './store/useAuthStore';
 import './App.css';
 
@@ -43,6 +44,13 @@ function App() {
             <Route path="/vendor" element={
               <ProtectedRoute role="VENDOR">
                 <VendorDashboard />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={
+              <ProtectedRoute role="ADMIN">
+                <AdminDashboard />
               </ProtectedRoute>
             } />
           </Routes>
