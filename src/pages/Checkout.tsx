@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { CreditCard, MapPin, Tag, Package, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useCartStore } from '../store/useCartStore';
 import { ordersService } from '../services/orders.service';
 import { couponsService } from '../services/coupons.service';
+import { useAuthStore } from '../store/useAuthStore';
 
 interface CouponResult { code: string; discountType: string; discountValue: number; }
 
@@ -13,9 +14,9 @@ const PAYMENT_METHODS = [
 ];
 
 export const Checkout = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { cart, fetchCart, clearCart } = useCartStore();
+  const { user } = useAuthStore();
 
   const [shippingAddress, setShippingAddress] = useState('');
   const [notes, setNotes] = useState('');
@@ -28,9 +29,27 @@ export const Checkout = () => {
   const [error, setError] = useState('');
   const [orderSuccess, setOrderSuccess] = useState<{ orderNumber: string; id: string } | null>(null);
 
+  const canPlaceOrder = user?.role === 'CUSTOMER';
+
   useEffect(() => {
     fetchCart().catch(() => {});
   }, []);
+
+  if (!canPlaceOrder) {
+    return (
+      <div className="pt-32 pb-24 px-6 text-center">
+        <CreditCard className="w-12 h-12 mx-auto text-neutral-300 mb-4" />
+        <h1 className="text-3xl font-serif font-bold mb-4">Checkout unavailable</h1>
+        <p className="text-sm text-neutral-500 mb-6">Only customer accounts can place orders.</p>
+        <div className="flex items-center justify-center gap-4 flex-wrap">
+          <Link to="/shop" className="premium-btn">Back to Shop</Link>
+          <Link to="/dashboard" className="px-6 py-3 border border-neutral-200 text-[10px] font-bold uppercase tracking-widest hover:border-brand-onyx transition-colors">
+            Go to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const subtotal = cart?.items?.reduce((sum, item) => sum + item.product.price * item.quantity, 0) ?? 0;
   const discount = coupon

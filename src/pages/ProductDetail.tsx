@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, Heart, ChevronLeft, Star, Send } from 'lucide-react';
 import { productsService } from '../services/products.service';
 import { reviewsService } from '../services/reviews.service';
@@ -13,6 +13,23 @@ interface Product {
   category?: { id: string; name: string } | null;
   vendor?: { id: string; name: string } | null;
 }
+
+const extractReviews = (payload: unknown): Review[] => {
+  if (Array.isArray(payload)) return payload as Review[];
+  if (!payload || typeof payload !== 'object') return [];
+
+  const envelope = payload as Record<string, unknown>;
+  if (Array.isArray(envelope.data)) return envelope.data as Review[];
+  if (Array.isArray(envelope.items)) return envelope.items as Review[];
+
+  if (envelope.data && typeof envelope.data === 'object') {
+    const nested = envelope.data as Record<string, unknown>;
+    if (Array.isArray(nested.data)) return nested.data as Review[];
+    if (Array.isArray(nested.items)) return nested.items as Review[];
+  }
+
+  return [];
+};
 
 const StarRating = ({ rating, size = 'sm' }: { rating: number; size?: 'sm' | 'md' }) => {
   const sz = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
@@ -40,6 +57,7 @@ const InteractiveStar = ({ rating, onRate }: { rating: number; onRate: (r: numbe
 
 export const ProductDetail = () => {
   const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
   const { addItem } = useCartStore();
 
@@ -66,8 +84,7 @@ export const ProductDetail = () => {
         const pid = p?.id;
         if (pid) {
           reviewsService.getProductReviews(pid).then((r) => {
-            const rd = r.data;
-            setReviews(Array.isArray(rd) ? rd : (rd?.data?.data ?? rd?.data ?? rd?.items ?? []));
+            setReviews(extractReviews(r.data));
           }).catch(() => {});
         }
       })
@@ -83,7 +100,13 @@ export const ProductDetail = () => {
       await addItem(product.id, quantity);
       setAddedMsg('Added to cart!');
       setTimeout(() => setAddedMsg(''), 3000);
-    } catch {
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        useAuthStore.getState().logout();
+        navigate('/login');
+        return;
+      }
+
       setAddedMsg('Failed to add to cart.');
     } finally {
       setAdding(false);
@@ -97,7 +120,7 @@ export const ProductDetail = () => {
     try {
       const res = await reviewsService.createReview({ productId: product.id, rating: reviewForm.rating, comment: reviewForm.comment });
       const newReview = res.data?.data ?? res.data;
-      setReviews((prev) => [{ ...newReview, user: { name: user?.name } }, ...prev]);
+      setReviews((prev) => [{ ...(newReview as Review), user: { name: user?.name } }, ...prev]);
       setReviewForm({ rating: 5, comment: '' });
       setReviewMsg('Review submitted!');
       setTimeout(() => setReviewMsg(''), 3000);

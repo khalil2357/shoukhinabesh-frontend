@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, User as UserIcon, LogOut, ChevronRight, X } from 'lucide-react';
+import { Package, User as UserIcon, LogOut, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ordersService } from '../../services/orders.service';
 import api from '../../api/axios';
@@ -45,7 +45,13 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
           const data = res.data;
           setOrders(Array.isArray(data) ? data : (data?.data?.data ?? data?.data ?? data?.items ?? []));
         })
-        .catch(() => {})
+        .catch((err: unknown) => {
+          const error = err as { response?: { status?: number } };
+          if (error.response?.status === 401) {
+            useAuthStore.getState().logout();
+            window.location.href = '/login';
+          }
+        })
         .finally(() => setLoadingOrders(false));
     }
   }, [tab]);
@@ -71,7 +77,13 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
       const updated = res.data?.data ?? res.data;
       if (updated && user) setAuth({ ...user, name: updated.name ?? profileForm.name }, useAuthStore.getState().token ?? '');
       setProfileMsg('Profile updated successfully!');
-    } catch {
+    } catch (err: unknown) {
+      const error = err as { response?: { status?: number } };
+      if (error.response?.status === 401) {
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+        return;
+      }
       setProfileMsg('Failed to update profile.');
     } finally {
       setSavingProfile(false);

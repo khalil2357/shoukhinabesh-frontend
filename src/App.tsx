@@ -15,8 +15,10 @@ import { useAuthStore } from './store/useAuthStore';
 import './App.css';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, roles }: { children: JSX.Element; roles?: string[] }) => {
-  const { isAuthenticated, user } = useAuthStore();
+const ProtectedRoute = ({ children, roles }: { children: React.ReactNode; roles?: string[] }) => {
+  const { isAuthenticated, user, hasHydrated } = useAuthStore();
+
+  if (!hasHydrated) return <div className="min-h-screen bg-brand-cream" />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
@@ -41,7 +43,7 @@ function App() {
 
             {/* Checkout — requires auth */}
             <Route path="/checkout" element={
-              <ProtectedRoute roles={['CUSTOMER', 'VENDOR', 'ADMIN']}>
+              <ProtectedRoute roles={['CUSTOMER']}>
                 <Checkout />
               </ProtectedRoute>
             } />
@@ -53,7 +55,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/dashboard/orders" element={
-              <ProtectedRoute roles={['CUSTOMER', 'VENDOR', 'ADMIN']}>
+              <ProtectedRoute roles={['CUSTOMER']}>
                 <CustomerDashboard initialTab="orders" />
               </ProtectedRoute>
             } />

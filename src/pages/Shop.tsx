@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { productsService } from '../services/products.service';
 import { categoriesService } from '../services/categories.service';
 import { useCartStore } from '../store/useCartStore';
@@ -31,7 +31,8 @@ const SkeletonCard = () => (
 
 export const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
+  const { isAuthenticated, logout } = useAuthStore();
   const { addItem } = useCartStore();
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -40,6 +41,7 @@ export const Shop = () => {
   const [total, setTotal] = useState(0);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [cartMsg, setCartMsg] = useState('');
 
   // Filter state
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -117,10 +119,30 @@ export const Shop = () => {
   };
 
   const handleAddToCart = async (product: Product) => {
-    if (!isAuthenticated) { window.location.href = '/login'; return; }
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
     setAddingId(product.id);
-    try { await addItem(product.id, 1); } catch (e) { console.error(e); }
-    finally { setAddingId(null); }
+    setCartMsg('');
+    try {
+      await addItem(product.id, 1);
+      setCartMsg('Added to cart!');
+      window.setTimeout(() => setCartMsg(''), 2500);
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        logout();
+        navigate('/login');
+        return;
+      }
+
+      console.error(error);
+      setCartMsg('Unable to add this item right now.');
+      window.setTimeout(() => setCartMsg(''), 2500);
+    } finally {
+      setAddingId(null);
+    }
   };
 
   const totalPages = Math.ceil(total / LIMIT);
@@ -156,6 +178,7 @@ export const Shop = () => {
             </div>
           </div>
           {total > 0 && <p className="text-[10px] text-neutral-400 mt-3 font-bold uppercase tracking-widest">{total} pieces found</p>}
+          {cartMsg && <p className="text-[10px] font-bold uppercase tracking-widest text-brand-onyx mt-3">{cartMsg}</p>}
         </div>
       </div>
 
