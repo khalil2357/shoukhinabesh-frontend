@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://192.168.0.161:3000/api/v1',
+  baseURL: import.meta.env.VITE_API_URL || 'https://shoukhinabesh-backend.onrender.com',
   headers: {
     'Content-Type': 'application/json',
   },
