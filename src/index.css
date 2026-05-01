@@ -7,6 +7,8 @@
   --color-brand-onyx: #0f172a;
   --color-brand-cream: #f8f5f2;
   --color-brand-gold: #c5a35d;
+  --color-brand-gold-light: #e8d5a3;
+  --color-brand-stone: #e8e4e0;
 }
 
 @layer base {
@@ -17,6 +19,10 @@
   h1, h2, h3, h4, .font-serif {
     @apply font-serif;
   }
+
+  * {
+    box-sizing: border-box;
+  }
 }
 
 @utility section-padding {
@@ -24,9 +30,97 @@
 }
 
 @utility premium-btn {
-  @apply inline-flex items-center justify-center px-8 py-3 bg-brand-onyx text-brand-cream text-sm font-semibold tracking-widest uppercase transition-all duration-300 hover:bg-neutral-800 disabled:opacity-50;
+  @apply inline-flex items-center justify-center px-8 py-3 bg-brand-onyx text-brand-cream text-sm font-semibold tracking-widest uppercase transition-all duration-300 hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 @utility link-underline {
   @apply relative after:absolute after:bottom-0 after:left-0 after:h-[1px] after:w-0 after:bg-current after:transition-all hover:after:w-full;
 }
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* Skeleton loading */
+.skeleton {
+  background: linear-gradient(90deg, #e8e4e0 25%, #f0ede9 50%, #e8e4e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #c5a35d44;
+  border-radius: 2px;
+}
+
+/* Range input */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 2px;
+  background: #0f172a;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #0f172a;
+  cursor: pointer;
+}
+
+/* Star rating */
+.star-filled { color: #c5a35d; }
+.star-empty { color: #d1cdc8; }

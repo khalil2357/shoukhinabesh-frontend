@@ -1,37 +1,31 @@
-import React from 'react';
+import type { ButtonHTMLAttributes } from 'react';
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
 }
 
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'primary', size = 'md', children, ...props }, ref) => {
-    const baseStyles = "inline-flex items-center justify-center text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed";
-    
-    const variants = {
-      primary: "bg-brand-onyx text-brand-cream hover:bg-brand-gold",
-      secondary: "bg-brand-gold text-brand-onyx hover:bg-brand-onyx hover:text-brand-cream",
-      outline: "border border-brand-onyx text-brand-onyx hover:bg-brand-onyx hover:text-brand-cream",
-      ghost: "hover:bg-neutral-100 text-brand-onyx"
-    };
+export const Button = ({ variant = 'primary', size = 'md', className = '', children, ...props }: ButtonProps) => {
+  const base = 'inline-flex items-center justify-center font-bold uppercase tracking-widest transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none';
 
-    const sizes = {
-      sm: "h-9 px-4",
-      md: "h-11 px-8",
-      lg: "h-14 px-10 text-sm"
-    };
+  const variants = {
+    primary: 'bg-brand-onyx text-brand-cream hover:bg-neutral-800 border border-brand-onyx',
+    outline: 'bg-transparent text-brand-onyx border border-brand-onyx hover:bg-brand-onyx hover:text-brand-cream',
+    ghost: 'bg-transparent text-neutral-600 border border-neutral-200 hover:border-neutral-400',
+  };
 
-    return (
-      <button
-        ref={ref}
-        className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
-        {...props}
-      >
-        {children}
-      </button>
-    );
-  }
-);
+  const sizes = {
+    sm: 'px-5 py-2 text-[10px]',
+    md: 'px-8 py-3 text-[11px]',
+    lg: 'px-10 py-4 text-xs',
+  };
 
-Button.displayName = "Button";
+  return (
+    <button
+      className={`${base} ${variants[variant]} ${sizes[size]} ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};

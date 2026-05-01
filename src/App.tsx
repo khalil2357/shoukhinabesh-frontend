@@ -5,6 +5,9 @@ import { Shop } from './pages/Shop';
 import { Cart } from './pages/Cart';
 import { ProductDetail } from './pages/ProductDetail';
 import { Login, Register } from './pages/auth/AuthPages';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
+import { Checkout } from './pages/Checkout';
 import { CustomerDashboard } from './pages/account/CustomerDashboard';
 import { VendorDashboard } from './pages/vendor/VendorDashboard';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -12,10 +15,10 @@ import { useAuthStore } from './store/useAuthStore';
 import './App.css';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, role }: { children: JSX.Element, role?: string }) => {
+const ProtectedRoute = ({ children, roles }: { children: JSX.Element; roles?: string[] }) => {
   const { isAuthenticated, user } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to="/login" />;
-  if (role && user?.role !== role) return <Navigate to="/" />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (roles && user && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
 };
 
@@ -26,68 +29,96 @@ function App() {
         <Navbar />
         <main className="flex-grow">
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Home />} />
             <Route path="/shop" element={<Shop />} />
             <Route path="/product/:slug" element={<ProductDetail />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
+            {/* Checkout — requires auth */}
+            <Route path="/checkout" element={
+              <ProtectedRoute roles={['CUSTOMER', 'VENDOR', 'ADMIN']}>
+                <Checkout />
+              </ProtectedRoute>
+            } />
+
             {/* Customer Routes */}
             <Route path="/dashboard" element={
-              <ProtectedRoute role="CUSTOMER">
+              <ProtectedRoute roles={['CUSTOMER', 'VENDOR', 'ADMIN']}>
                 <CustomerDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/orders" element={
+              <ProtectedRoute roles={['CUSTOMER', 'VENDOR', 'ADMIN']}>
+                <CustomerDashboard initialTab="orders" />
               </ProtectedRoute>
             } />
 
             {/* Vendor Routes */}
             <Route path="/vendor" element={
-              <ProtectedRoute role="VENDOR">
+              <ProtectedRoute roles={['VENDOR', 'ADMIN']}>
                 <VendorDashboard />
               </ProtectedRoute>
             } />
 
             {/* Admin Routes */}
             <Route path="/admin" element={
-              <ProtectedRoute role="ADMIN">
+              <ProtectedRoute roles={['ADMIN']}>
                 <AdminDashboard />
               </ProtectedRoute>
             } />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-        
-        <footer className="bg-brand-onyx text-brand-cream section-padding">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-20">
-            <div className="lg:col-span-2 space-y-12">
-              <h2 className="text-4xl font-serif font-bold tracking-tighter">SHOUKHINABESH</h2>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 max-w-sm">
+
+        <footer className="bg-brand-onyx text-brand-cream py-20 px-6 md:px-12 lg:px-24">
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-16">
+            <div className="lg:col-span-2 space-y-6">
+              <h2 className="text-3xl font-serif font-bold tracking-tighter">SHOUKHINABESH</h2>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-neutral-400 max-w-sm leading-loose">
                 Fine jewellery crafted for the extraordinary. Ethically sourced, hand-finished, and timelessly designed.
               </p>
+              <div className="flex gap-4 pt-2">
+                {['Instagram', 'Pinterest', 'Facebook'].map((s) => (
+                  <a key={s} href="#" className="text-[9px] font-bold uppercase tracking-widest text-neutral-500 hover:text-brand-gold transition-colors">
+                    {s}
+                  </a>
+                ))}
+              </div>
             </div>
             <div className="space-y-6">
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">The Collection</h4>
               <ul className="space-y-3 text-xs font-medium">
-                <li><a href="/shop" className="hover:text-brand-gold transition-colors">Rings</a></li>
-                <li><a href="/shop" className="hover:text-brand-gold transition-colors">Necklaces</a></li>
-                <li><a href="/shop" className="hover:text-brand-gold transition-colors">Earrings</a></li>
-                <li><a href="/shop" className="hover:text-brand-gold transition-colors">Bracelets</a></li>
+                {['Rings', 'Necklaces', 'Earrings', 'Bracelets', 'New Arrivals'].map((c) => (
+                  <li key={c}>
+                    <a href="/shop" className="text-neutral-400 hover:text-brand-gold transition-colors">{c}</a>
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="space-y-6">
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Company</h4>
               <ul className="space-y-3 text-xs font-medium">
-                <li><a href="#" className="hover:text-brand-gold transition-colors">Our Story</a></li>
-                <li><a href="#" className="hover:text-brand-gold transition-colors">Sustainability</a></li>
-                <li><a href="#" className="hover:text-brand-gold transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-brand-gold transition-colors">Journal</a></li>
+                {['Our Story', 'Sustainability', 'Contact', 'Journal', 'Careers'].map((c) => (
+                  <li key={c}>
+                    <a href="#" className="text-neutral-400 hover:text-brand-gold transition-colors">{c}</a>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
-          <div className="mt-24 pt-8 border-t border-neutral-800 text-[9px] font-bold uppercase tracking-widest text-neutral-600 flex justify-between">
-            <p>© 2026 SHOUKHINABESH JEWELLERY. ALL RIGHTS RESERVED.</p>
+          <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-neutral-800 text-[9px] font-bold uppercase tracking-widest text-neutral-600 flex flex-col md:flex-row justify-between gap-4">
+            <p>© 2026 Shoukhinabesh Jewellery. All Rights Reserved.</p>
             <div className="flex gap-8">
-               <a href="#">Privacy</a>
-               <a href="#">Terms</a>
+              <a href="#" className="hover:text-neutral-400 transition-colors">Privacy</a>
+              <a href="#" className="hover:text-neutral-400 transition-colors">Terms</a>
+              <a href="#" className="hover:text-neutral-400 transition-colors">Cookies</a>
             </div>
           </div>
         </footer>

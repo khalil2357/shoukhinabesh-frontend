@@ -34,7 +34,8 @@ type CategoryRecord = {
   id: string;
   name: string;
   slug: string;
-  imageUrl?: string | null;
+  image?: string | null;
+  description?: string | null;
 };
 
 type ProductRecord = {
@@ -105,8 +106,8 @@ type ProductFormState = {
 
 type CategoryFormState = {
   name: string;
-  slug: string;
-  imageUrl: string;
+  description: string;
+  image: string;
 };
 
 type CouponFormState = {
@@ -145,13 +146,26 @@ const extractList = <T,>(payload: unknown): T[] => {
   if (Array.isArray(payload)) return payload as T[];
   if (!payload || typeof payload !== 'object') return [];
 
-  const envelope = payload as ApiListEnvelope<T>;
-  if (Array.isArray(envelope.data)) return envelope.data;
-  if (Array.isArray(envelope.items)) return envelope.items;
+  const envelope = payload as Record<string, unknown>;
+  // check common keys directly
+  if (Array.isArray(envelope.data)) return envelope.data as T[];
+  if (Array.isArray(envelope.items)) return envelope.items as T[];
+
+  // look for any array in the first level
+  for (const key in envelope) {
+    if (Array.isArray(envelope[key])) return envelope[key] as T[];
+  }
+
+  // check inside data object
   if (envelope.data && typeof envelope.data === 'object') {
-    const nested = envelope.data as { data?: T[]; items?: T[] };
-    if (Array.isArray(nested.data)) return nested.data;
-    if (Array.isArray(nested.items)) return nested.items;
+    const nested = envelope.data as Record<string, unknown>;
+    if (Array.isArray(nested.data)) return nested.data as T[];
+    if (Array.isArray(nested.items)) return nested.items as T[];
+    
+    // look for any array in the nested data
+    for (const key in nested) {
+      if (Array.isArray(nested[key])) return nested[key] as T[];
+    }
   }
 
   return [];
@@ -159,12 +173,25 @@ const extractList = <T,>(payload: unknown): T[] => {
 
 const extractItem = <T,>(payload: unknown): T | null => {
   if (!payload || typeof payload !== 'object') return null;
-  const envelope = payload as ApiItemEnvelope<T>;
+  const envelope = payload as Record<string, unknown>;
+  
   if (envelope.data && typeof envelope.data === 'object' && !Array.isArray(envelope.data)) {
-    const nested = envelope.data as { data?: T };
-    if (nested.data) return nested.data;
+    const nested = envelope.data as Record<string, unknown>;
+    if (nested.data) return nested.data as T;
+    
+    // look for specific model keys
+    for (const key of ['user', 'product', 'category', 'coupon', 'order', 'review']) {
+      if (nested[key]) return nested[key] as T;
+    }
     return envelope.data as T;
   }
+
+  for (const key of ['user', 'product', 'category', 'coupon', 'order', 'review']) {
+    if (envelope[key]) return envelope[key] as T;
+  }
+  
+  if (envelope.id) return envelope as T;
+
   return null;
 };
 
@@ -203,8 +230,8 @@ export const AdminDashboard = () => {
   });
   const [categoryForm, setCategoryForm] = useState<CategoryFormState>({
     name: '',
-    slug: '',
-    imageUrl: '',
+    description: '',
+    image: '',
   });
   const [couponForm, setCouponForm] = useState<CouponFormState>({
     code: '',
@@ -404,8 +431,8 @@ export const AdminDashboard = () => {
 
     const payload = {
       name: categoryForm.name.trim(),
-      slug: categoryForm.slug.trim() || slugify(categoryForm.name),
-      imageUrl: categoryForm.imageUrl.trim() || null,
+      description: categoryForm.description.trim() || undefined,
+      image: categoryForm.image.trim() || undefined,
     };
 
     const requestKey = editingCategoryId ? `category-update-${editingCategoryId}` : 'category-create';
@@ -431,7 +458,7 @@ export const AdminDashboard = () => {
       }
 
       setEditingCategoryId(null);
-      setCategoryForm({ name: '', slug: '', imageUrl: '' });
+      setCategoryForm({ name: '', description: '', image: '' });
       setNotice(editingCategoryId ? 'Category updated.' : 'Category created.');
     });
   };
@@ -506,8 +533,8 @@ export const AdminDashboard = () => {
     setEditingCategoryId(category.id);
     setCategoryForm({
       name: category.name,
-      slug: category.slug,
-      imageUrl: category.imageUrl ?? '',
+      description: category.description ?? '',
+      image: category.image ?? '',
     });
   };
 
@@ -542,7 +569,7 @@ export const AdminDashboard = () => {
 
   const resetCategoryForm = () => {
     setEditingCategoryId(null);
-    setCategoryForm({ name: '', slug: '', imageUrl: '' });
+    setCategoryForm({ name: '', description: '', image: '' });
   };
 
   const resetCouponForm = () => {
@@ -925,17 +952,16 @@ export const AdminDashboard = () => {
                 />
                 <input
                   type="text"
-                  required
-                  value={categoryForm.slug}
-                  onChange={(event) => setCategoryForm({ ...categoryForm, slug: event.target.value })}
-                  placeholder="Slug"
+                  value={categoryForm.description}
+                  onChange={(event) => setCategoryForm({ ...categoryForm, description: event.target.value })}
+                  placeholder="Optional description"
                   className="w-full border border-neutral-200 px-4 py-3 text-sm focus:outline-none focus:border-brand-onyx"
                 />
               </div>
               <input
                 type="text"
-                value={categoryForm.imageUrl}
-                onChange={(event) => setCategoryForm({ ...categoryForm, imageUrl: event.target.value })}
+                value={categoryForm.image}
+                onChange={(event) => setCategoryForm({ ...categoryForm, image: event.target.value })}
                 placeholder="Optional image URL"
                 className="w-full border border-neutral-200 px-4 py-3 text-sm focus:outline-none focus:border-brand-onyx"
               />
