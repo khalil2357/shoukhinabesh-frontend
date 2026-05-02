@@ -152,9 +152,13 @@ export const Navbar = () => {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center gap-1.5 p-2 text-neutral-600 hover:text-brand-onyx transition-colors rounded-sm hover:bg-neutral-100"
                 >
-                  <div className="w-6 h-6 bg-brand-onyx text-brand-cream rounded-full flex items-center justify-center text-[10px] font-bold">
-                    {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
-                  </div>
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={user.name ?? 'User avatar'} className="w-6 h-6 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-6 h-6 bg-brand-onyx text-brand-cream rounded-full flex items-center justify-center text-[10px] font-bold">
+                      {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
+                    </div>
+                  )}
                   <ChevronDown className={`w-3 h-3 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 

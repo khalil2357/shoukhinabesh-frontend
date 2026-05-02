@@ -43,8 +43,9 @@ export const authService = {
     const auth = extractAuth(response.data);
     if (auth) {
       useAuthStore.getState().setAuth(auth.user, auth.accessToken);
+      return auth;
     }
-    return response;
+    return null;
   },
 
   async register(data: RegisterData) {
@@ -52,8 +53,9 @@ export const authService = {
     const auth = extractAuth(response.data);
     if (auth) {
       useAuthStore.getState().setAuth(auth.user, auth.accessToken);
+      return auth;
     }
-    return response;
+    return null;
   },
 
   async logout() {
@@ -66,7 +68,8 @@ export const authService = {
     const auth = extractAuth(response.data);
     if (auth) {
       useAuthStore.getState().setAuth(auth.user, auth.accessToken);
+      return auth;
     }
-    return response;
+    return null;
   },
 };

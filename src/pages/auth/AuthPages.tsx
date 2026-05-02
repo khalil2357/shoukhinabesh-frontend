@@ -17,8 +17,8 @@ export const Login = () => {
     setLoading(true);
     setError('');
     try {
-      await authService.login({ email, password });
-      const user = useAuthStore.getState().user;
+      const auth = await authService.login({ email, password });
+      const user = auth?.user ?? useAuthStore.getState().user;
       if (user?.role === 'ADMIN') navigate('/admin');
       else if (user?.role === 'VENDOR') navigate('/vendor');
       else navigate('/dashboard');
@@ -103,8 +103,9 @@ export const Register = () => {
     setLoading(true);
     setError('');
     try {
-      await authService.register(formData);
-      if (formData.role === 'VENDOR') navigate('/vendor');
+      const auth = await authService.register(formData);
+      const user = auth?.user ?? useAuthStore.getState().user;
+      if (user?.role === 'VENDOR') navigate('/vendor');
       else navigate('/dashboard');
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
