@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { Home } from './pages/Home';
@@ -18,7 +19,7 @@ import { useAuthStore } from './store/useAuthStore';
 import './App.css';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, roles }: { children: JSX.Element; roles?: string[] }) => {
+const ProtectedRoute = ({ children, roles }: { children: ReactNode; roles?: string[] }) => {
   const { isAuthenticated, user } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/" replace />;

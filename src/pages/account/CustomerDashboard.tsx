@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, User as UserIcon, LogOut, ChevronRight, X } from 'lucide-react';
+import { Package, User as UserIcon, LogOut, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { ordersService } from '../../services/orders.service';
 import api from '../../api/axios';

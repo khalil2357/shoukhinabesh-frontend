@@ -106,6 +106,7 @@ type ProductFormState = {
 
 type CategoryFormState = {
   name: string;
+  slug: string;
   description: string;
   image: string;
 };
@@ -121,14 +122,7 @@ type CouponFormState = {
   isActive: boolean;
 };
 
-type ApiListEnvelope<T> = {
-  data?: T[] | T | { data?: T[]; items?: T[] };
-  items?: T[];
-};
 
-type ApiItemEnvelope<T> = {
-  data?: T | { data?: T };
-};
 
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
 
@@ -230,6 +224,7 @@ export const AdminDashboard = () => {
   });
   const [categoryForm, setCategoryForm] = useState<CategoryFormState>({
     name: '',
+    slug: '',
     description: '',
     image: '',
   });
@@ -334,11 +329,7 @@ export const AdminDashboard = () => {
     setProducts((currentProducts) => currentProducts.map((product) => (product.id === id ? updated ?? { ...product, ...payload } : product)));
   };
 
-  const patchCategory = async (id: string, payload: Partial<CategoryRecord>) => {
-    const response = await api.patch(`/categories/${id}`, payload);
-    const updated = extractItem<CategoryRecord>(response.data);
-    setCategories((currentCategories) => currentCategories.map((category) => (category.id === id ? updated ?? { ...category, ...payload } : category)));
-  };
+
 
   const patchOrder = async (id: string, payload: Partial<OrderRecord>) => {
     const response = await api.patch(`/orders/${id}`, payload);
@@ -458,7 +449,7 @@ export const AdminDashboard = () => {
       }
 
       setEditingCategoryId(null);
-      setCategoryForm({ name: '', description: '', image: '' });
+      setCategoryForm({ name: '', slug: '', description: '', image: '' });
       setNotice(editingCategoryId ? 'Category updated.' : 'Category created.');
     });
   };
@@ -533,6 +524,7 @@ export const AdminDashboard = () => {
     setEditingCategoryId(category.id);
     setCategoryForm({
       name: category.name,
+      slug: category.slug ?? '',
       description: category.description ?? '',
       image: category.image ?? '',
     });
@@ -569,7 +561,7 @@ export const AdminDashboard = () => {
 
   const resetCategoryForm = () => {
     setEditingCategoryId(null);
-    setCategoryForm({ name: '', description: '', image: '' });
+    setCategoryForm({ name: '', slug: '', description: '', image: '' });
   };
 
   const resetCouponForm = () => {
@@ -588,7 +580,6 @@ export const AdminDashboard = () => {
 
   const totalUsers = users.length;
   const activeVendors = users.filter((user) => user.role === 'VENDOR' && user.isActive).length;
-  const publishedProducts = products.filter((product) => product.isPublished).length;
   const monthlyRevenue = orders.reduce((sum, order) => sum + order.total, 0);
   const activeCoupons = coupons.filter((coupon) => coupon.isActive).length;
 

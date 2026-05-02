@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { CreditCard, MapPin, Tag, Package, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useCartStore } from '../store/useCartStore';
 import { ordersService } from '../services/orders.service';
@@ -13,7 +13,6 @@ const PAYMENT_METHODS = [
 ];
 
 export const Checkout = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { cart, fetchCart, clearCart } = useCartStore();
 
