@@ -123,6 +123,8 @@ type CouponFormState = {
   isActive: boolean;
 };
 
+
+
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
 
 const addDaysInputValue = (days: number) => {
@@ -340,6 +342,8 @@ export const AdminDashboard = () => {
     setProducts((currentProducts) => currentProducts.map((product) => (product.id === id ? updated ?? { ...product, ...payload } : product)));
   };
 
+
+
   const patchOrder = async (id: string, payload: Partial<OrderRecord>) => {
     const response = await api.patch(`/orders/${id}`, payload);
     const updated = extractItem<OrderRecord>(response.data);
@@ -534,7 +538,7 @@ export const AdminDashboard = () => {
     setEditingCategoryId(category.id);
     setCategoryForm({
       name: category.name,
-      slug: category.slug,
+      slug: category.slug ?? '',
       description: category.description ?? '',
       image: category.image ?? '',
     });

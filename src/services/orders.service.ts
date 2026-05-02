@@ -14,4 +14,5 @@ export const ordersService = {
   getOrderById: (id: string) => api.get(`/orders/${id}`),
   updateOrderStatus: (id: string, status: string) => api.patch(`/orders/${id}/status`, { status }),
   cancelOrder: (id: string) => api.post(`/orders/${id}/cancel`),
+  createStripeSession: (payload: any) => api.post('/payments/stripe/session', payload),
 };

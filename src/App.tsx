@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { Home } from './pages/Home';
 import { Shop } from './pages/Shop';
@@ -11,14 +12,15 @@ import { Checkout } from './pages/Checkout';
 import { CustomerDashboard } from './pages/account/CustomerDashboard';
 import { VendorDashboard } from './pages/vendor/VendorDashboard';
 import { AdminDashboard } from './pages/admin/AdminDashboard';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
+import Cookies from './pages/Cookies';
 import { useAuthStore } from './store/useAuthStore';
 import './App.css';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, roles }: { children: React.ReactNode; roles?: string[] }) => {
-  const { isAuthenticated, user, hasHydrated } = useAuthStore();
-
-  if (!hasHydrated) return <div className="min-h-screen bg-brand-cream" />;
+const ProtectedRoute = ({ children, roles }: { children: ReactNode; roles?: string[] }) => {
+  const { isAuthenticated, user } = useAuthStore();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
@@ -75,6 +77,9 @@ function App() {
             } />
 
             {/* Fallback */}
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/cookies" element={<Cookies />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
@@ -118,9 +123,9 @@ function App() {
           <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-neutral-800 text-[9px] font-bold uppercase tracking-widest text-neutral-600 flex flex-col md:flex-row justify-between gap-4">
             <p>© 2026 Shoukhinabesh Jewellery. All Rights Reserved.</p>
             <div className="flex gap-8">
-              <a href="#" className="hover:text-neutral-400 transition-colors">Privacy</a>
-              <a href="#" className="hover:text-neutral-400 transition-colors">Terms</a>
-              <a href="#" className="hover:text-neutral-400 transition-colors">Cookies</a>
+              <Link to="/privacy" className="hover:text-neutral-400 transition-colors">Privacy</Link>
+              <Link to="/terms" className="hover:text-neutral-400 transition-colors">Terms</Link>
+              <Link to="/cookies" className="hover:text-neutral-400 transition-colors">Cookies</Link>
             </div>
           </div>
         </footer>

@@ -10,7 +10,7 @@ interface CouponResult { code: string; discountType: string; discountValue: numb
 
 const PAYMENT_METHODS = [
   { id: 'stripe', label: 'Stripe', desc: 'Credit/Debit Card', icon: '💳' },
-  { id: 'sslcommerz', label: 'SSLCommerz', desc: 'bKash, Nagad & more', icon: '📱' },
+  { id: 'offline', label: 'Offline Payment', desc: 'Pay later — Cash on Delivery / Bank Transfer', icon: '🏷️' },
 ];
 
 export const Checkout = () => {
@@ -81,18 +81,49 @@ export const Checkout = () => {
     setPlacing(true);
     setError('');
     try {
-      const res = await ordersService.placeOrder({
-        paymentMethod,
-        shippingAddress: shippingAddress.trim() || undefined,
-        couponCode: coupon?.code || undefined,
-        notes: notes.trim() || undefined,
-      });
-      const order = res.data?.data ?? res.data;
-      await clearCart();
-      setOrderSuccess({ orderNumber: order.orderNumber ?? order.id, id: order.id });
+      if (paymentMethod === 'offline') {
+        const res = await ordersService.placeOrder({
+          paymentMethod: 'OFFLINE',
+          shippingAddress: shippingAddress.trim() || undefined,
+          couponCode: coupon?.code || undefined,
+          notes: notes.trim() || undefined,
+        });
+        const order = res.data?.data ?? res.data;
+        await clearCart();
+        setOrderSuccess({ orderNumber: order.orderNumber ?? order.id, id: order.id });
+      } else if (paymentMethod === 'stripe') {
+        // Create Stripe session on backend and redirect to Checkout
+        const payload = {
+          amount: Math.round(total * 100),
+          currency: 'usd',
+          items: cart.items.map((it: any) => ({ id: it.product.id, name: it.product.name, quantity: it.quantity, price: Math.round(it.product.price * 100) })),
+          shippingAddress: shippingAddress.trim() || undefined,
+          couponCode: coupon?.code || undefined,
+          notes: notes.trim() || undefined,
+        };
+        const sessionRes = await ordersService.createStripeSession(payload);
+        const sessionId = sessionRes.data?.id ?? sessionRes.data?.sessionId ?? sessionRes.data?.data?.id;
+        if (!sessionId) throw new Error('Failed to create Stripe session');
+
+        const loadStripeJs = () => new Promise<void>((resolve, reject) => {
+          if ((window as any).Stripe) return resolve();
+          const s = document.createElement('script');
+          s.src = 'https://js.stripe.com/v3/';
+          s.onload = () => resolve();
+          s.onerror = () => reject(new Error('Failed to load Stripe.js'));
+          document.head.appendChild(s);
+        });
+
+        await loadStripeJs();
+        const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+        if (!publishableKey) throw new Error('Missing Stripe publishable key');
+        const stripe = (window as any).Stripe(publishableKey);
+        const result = await stripe.redirectToCheckout({ sessionId });
+        if (result && result.error) throw result.error;
+      }
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || 'Failed to place order. Please try again.');
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
+      setError(e.response?.data?.message || e.message || 'Failed to place order. Please try again.');
     } finally {
       setPlacing(false);
     }

@@ -30,7 +30,7 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  const [profileForm, setProfileForm] = useState({ name: user?.name ?? '', avatar: '' });
+  const [profileForm, setProfileForm] = useState({ name: user?.name ?? '', avatar: user?.avatar ?? '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -42,16 +42,24 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
       setLoadingOrders(true);
       ordersService.getMyOrders({ limit: 20 })
         .then((res) => {
-          const data = res.data;
-          setOrders(Array.isArray(data) ? data : (data?.data?.data ?? data?.data ?? data?.items ?? []));
-        })
-        .catch((err: unknown) => {
-          const error = err as { response?: { status?: number } };
-          if (error.response?.status === 401) {
-            useAuthStore.getState().logout();
-            window.location.href = '/login';
+          let items: unknown = res?.data;
+          // Normalize common API shapes into an array
+          if (items && typeof items === 'object') {
+            const d: any = items;
+            if (Array.isArray(d)) {
+              // already an array
+            } else if (Array.isArray(d.data)) items = d.data;
+            else if (Array.isArray(d.data?.data)) items = d.data.data;
+            else if (Array.isArray(d.items)) items = d.items;
+            else if (Array.isArray(d.orders)) items = d.orders;
+            else items = [];
+          } else {
+            items = [];
           }
+          if (!Array.isArray(items)) items = [];
+          setOrders(items as Order[]);
         })
+        .catch(() => { setOrders([]); })
         .finally(() => setLoadingOrders(false));
     }
   }, [tab]);
@@ -75,7 +83,7 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
       if (profileForm.avatar) payload.avatar = profileForm.avatar;
       const res = await api.patch('/users/me', payload);
       const updated = res.data?.data ?? res.data;
-      if (updated && user) setAuth({ ...user, name: updated.name ?? profileForm.name }, useAuthStore.getState().token ?? '');
+      if (updated && user) setAuth({ ...user, name: updated.name ?? profileForm.name, avatar: updated.avatar ?? profileForm.avatar }, useAuthStore.getState().token ?? '');
       setProfileMsg('Profile updated successfully!');
     } catch (err: unknown) {
       const error = err as { response?: { status?: number } };
@@ -103,8 +111,19 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
         <div className="flex justify-between items-end mb-12 gap-4 flex-wrap">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400 mb-2 block">Welcome Back</span>
-            <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter">{user?.name}</h1>
-            <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-widest px-3 py-1 bg-brand-onyx/10 text-brand-onyx">{user?.role}</span>
+            <div className="flex items-center gap-4">
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user?.name ?? 'Avatar'} className="w-16 h-16 rounded-full object-cover" />
+              ) : (
+                <div className="w-16 h-16 bg-brand-onyx text-brand-cream rounded-full flex items-center justify-center text-xl font-bold">
+                  {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
+                </div>
+              )}
+              <div>
+                <h1 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter">{user?.name}</h1>
+                <span className="inline-block mt-2 text-[9px] font-bold uppercase tracking-widest px-3 py-1 bg-brand-onyx/10 text-brand-onyx">{user?.role}</span>
+              </div>
+            </div>
           </div>
           <button onClick={handleLogout} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400 hover:text-rose-500 transition-colors">
             <LogOut className="w-4 h-4" /> Sign Out
