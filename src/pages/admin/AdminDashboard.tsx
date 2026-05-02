@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import api from '../../api/axios';
 import { Button } from '../../components/ui/Button';
+import { reviewsService } from '../../services/reviews.service';
 import {
   BadgeDollarSign,
   BookCopy,
@@ -254,19 +255,31 @@ export const AdminDashboard = () => {
         api.get('/products'),
         api.get('/orders'),
         api.get('/coupons'),
-        api.get('/reviews'),
       ];
 
-      const [usersResult, categoriesResult, productsResult, ordersResult, couponsResult, reviewsResult] = await Promise.allSettled(requests);
+      const [usersResult, categoriesResult, productsResult, ordersResult, couponsResult] = await Promise.allSettled(requests);
 
       if (usersResult.status === 'fulfilled') setUsers(extractList<UserRecord>(usersResult.value.data));
       if (categoriesResult.status === 'fulfilled') setCategories(extractList<CategoryRecord>(categoriesResult.value.data));
-      if (productsResult.status === 'fulfilled') setProducts(extractList<ProductRecord>(productsResult.value.data));
+      if (productsResult.status === 'fulfilled') {
+        const loadedProducts = extractList<ProductRecord>(productsResult.value.data);
+        setProducts(loadedProducts);
+
+        const reviewResults = await Promise.allSettled(
+          loadedProducts.map((product) => reviewsService.getProductReviews(product.id)),
+        );
+
+        const loadedReviews = reviewResults.flatMap((result) => {
+          if (result.status !== 'fulfilled') return [];
+          return extractList<ReviewRecord>(result.value.data);
+        });
+
+        setReviews(loadedReviews);
+      }
       if (ordersResult.status === 'fulfilled') setOrders(extractList<OrderRecord>(ordersResult.value.data));
       if (couponsResult.status === 'fulfilled') setCoupons(extractList<CouponRecord>(couponsResult.value.data));
-      if (reviewsResult.status === 'fulfilled') setReviews(extractList<ReviewRecord>(reviewsResult.value.data));
 
-      const failedRequest = [usersResult, categoriesResult, productsResult, ordersResult, couponsResult, reviewsResult].find((result) => result.status === 'rejected');
+      const failedRequest = [usersResult, categoriesResult, productsResult, ordersResult, couponsResult].find((result) => result.status === 'rejected');
       if (failedRequest) {
         setError('Some admin data could not be loaded from the backend. Check the API routes and try again.');
       } else {
@@ -422,6 +435,7 @@ export const AdminDashboard = () => {
 
     const payload = {
       name: categoryForm.name.trim(),
+      slug: categoryForm.slug.trim() || slugify(categoryForm.name),
       description: categoryForm.description.trim() || undefined,
       image: categoryForm.image.trim() || undefined,
     };

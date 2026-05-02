@@ -45,7 +45,7 @@ function App() {
 
             {/* Checkout — requires auth */}
             <Route path="/checkout" element={
-              <ProtectedRoute roles={['CUSTOMER', 'VENDOR', 'ADMIN']}>
+              <ProtectedRoute roles={['CUSTOMER']}>
                 <Checkout />
               </ProtectedRoute>
             } />
@@ -57,7 +57,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/dashboard/orders" element={
-              <ProtectedRoute roles={['CUSTOMER', 'VENDOR', 'ADMIN']}>
+              <ProtectedRoute roles={['CUSTOMER']}>
                 <CustomerDashboard initialTab="orders" />
               </ProtectedRoute>
             } />

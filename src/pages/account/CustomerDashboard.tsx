@@ -85,7 +85,13 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
       const updated = res.data?.data ?? res.data;
       if (updated && user) setAuth({ ...user, name: updated.name ?? profileForm.name, avatar: updated.avatar ?? profileForm.avatar }, useAuthStore.getState().token ?? '');
       setProfileMsg('Profile updated successfully!');
-    } catch {
+    } catch (err: unknown) {
+      const error = err as { response?: { status?: number } };
+      if (error.response?.status === 401) {
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+        return;
+      }
       setProfileMsg('Failed to update profile.');
     } finally {
       setSavingProfile(false);
