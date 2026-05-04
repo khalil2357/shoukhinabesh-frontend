@@ -160,7 +160,7 @@ export const Home = () => {
         {HERO_SLIDES.map((slide, i) => (
           <div
             key={i}
-            ref={(el) => (slidesRef.current[i] = el)}
+            ref={(el) => { slidesRef.current[i] = el; }}
             className={`absolute inset-0 transition-opacity duration-1000 ${currentSlide === i ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
           >
             <div 
