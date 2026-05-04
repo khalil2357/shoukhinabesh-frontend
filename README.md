@@ -73,42 +73,24 @@ export default defineConfig([
 ```
 # shoukhinabesh-frontend
 
-## Stripe Checkout (Sandbox)
+## Checkout
 
-This frontend supports Stripe Checkout in test mode (sandbox) using PaymentIntent flow.
+This frontend uses a simplified order-first checkout. Customers submit the order directly, choose a payment preference, and the order is confirmed without client-side card handling.
 
 ### 1) Configure environment
 
 Create a `.env` file from `.env.example` and set:
 
 - `VITE_API_URL` to your backend API base URL
-- `VITE_STRIPE_PUBLISHABLE_KEY` to your Stripe test publishable key (`pk_test_...`)
 
-### 2) Backend requirement
-
-Your backend endpoint `POST /payments/stripe/intent` should accept `{ amount, currency }` and return:
-
-```json
-{
-  "clientSecret": "pi_xxx_secret_xxx",
-  "id": "pi_xxx",
-  "status": "requires_payment_method"
-}
-```
-
-The frontend will use `clientSecret` to confirm payment with the card.
-
-### 3) Checkout flow
+### 2) Checkout flow
 
 1. Go to Cart and click checkout
-2. Select **Stripe** as payment method
-3. Enter cardholder name and card details
-4. Click `Pay Now` to process payment
-5. After successful payment, the order is placed
+2. Enter the shipping address if needed
+3. Pick a payment preference
+4. Apply a coupon if you have one
+5. Submit the order and track it from your dashboard
 
-### 4) Test cards
+### 3) Payment handling
 
-Use Stripe test cards (for example `4242 4242 4242 4242`) with:
-- Any valid future expiry date (e.g., 12/25)
-- Any 3-digit CVC (e.g., 123)
-- Any ZIP code
+The frontend no longer mounts Stripe Elements or confirms payments in the browser. If you need card processing later, it should be handled through a dedicated server-backed flow rather than directly in the checkout form.

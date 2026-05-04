@@ -10,7 +10,7 @@ type OrderStatus = 'PLACED' | 'CONFIRMED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERE
 
 interface Order {
   id: string; orderNumber: string; total: number; status: OrderStatus;
-  paymentStatus: string; paymentMethod: string; createdAt?: string;
+  paymentStatus: string; paymentMethod: string; createdAt?: string; shippingAddress?: string; notes?: string;
   items?: { id: string; quantity: number; product?: { name: string; price: number; images: string[] } }[];
 }
 
@@ -29,7 +29,6 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
   const [tab, setTab] = useState<Tab>(initialTab);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState({ name: user?.name ?? '', avatar: user?.avatar ?? '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
@@ -43,16 +42,28 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
       ordersService.getMyOrders({ limit: 20 })
         .then((res) => {
           let items: unknown = res?.data;
-          // Normalize common API shapes into an array
+          // Handle backend wrapper: { success, data: { orders, total, ... }, message }
+          if (items && typeof items === 'object') {
+            const d: any = items;
+            // Extract from wrapped response
+            if (d.data && typeof d.data === 'object' && !Array.isArray(d.data)) {
+              items = d.data;
+            }
+          }
+          // Now normalize the data shape
           if (items && typeof items === 'object') {
             const d: any = items;
             if (Array.isArray(d)) {
               // already an array
-            } else if (Array.isArray(d.data)) items = d.data;
-            else if (Array.isArray(d.data?.data)) items = d.data.data;
-            else if (Array.isArray(d.items)) items = d.items;
-            else if (Array.isArray(d.orders)) items = d.orders;
-            else items = [];
+            } else if (Array.isArray(d.data)) {
+              items = d.data;
+            } else if (Array.isArray(d.items)) {
+              items = d.items;
+            } else if (Array.isArray(d.orders)) {
+              items = d.orders;
+            } else {
+              items = [];
+            }
           } else {
             items = [];
           }
@@ -64,15 +75,7 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
     }
   }, [tab]);
 
-  const handleCancelOrder = async (orderId: string) => {
-    setCancellingId(orderId);
-    try {
-      await ordersService.cancelOrder(orderId);
-      setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, status: 'CANCELLED' } : o));
-      if (selectedOrder?.id === orderId) setSelectedOrder((o) => o ? { ...o, status: 'CANCELLED' } : o);
-    } catch (e) { console.error(e); }
-    finally { setCancellingId(null); }
-  };
+
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,22 +234,65 @@ export const CustomerDashboard = ({ initialTab = 'profile' }: { initialTab?: Tab
                           {selectedOrder?.id === order.id ? 'Hide Details' : 'View Details'}
                           <ChevronRight className={`w-3 h-3 transition-transform ${selectedOrder?.id === order.id ? 'rotate-90' : ''}`} />
                         </button>
-                        {(order.status === 'PLACED' || order.status === 'CONFIRMED') && (
-                          <button
-                            onClick={() => handleCancelOrder(order.id)}
-                            disabled={cancellingId === order.id}
-                            className="text-[10px] font-bold uppercase tracking-widest text-rose-400 hover:text-rose-600 transition-colors disabled:opacity-40"
-                          >
-                            {cancellingId === order.id ? 'Cancelling...' : 'Cancel Order'}
-                          </button>
-                        )}
                       </div>
                       {selectedOrder?.id === order.id && (
-                        <div className="pt-4 border-t border-neutral-50 space-y-3">
+                        <div className="pt-4 border-t border-neutral-50 space-y-6">
+                          {/* Order Summary */}
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
-                            <div><p className="text-neutral-400 font-bold uppercase tracking-widest text-[9px]">Payment</p><p className="font-bold mt-1 capitalize">{order.paymentMethod}</p></div>
+                            <div><p className="text-neutral-400 font-bold uppercase tracking-widest text-[9px]">Payment Method</p><p className="font-bold mt-1 capitalize">{order.paymentMethod}</p></div>
                             <div><p className="text-neutral-400 font-bold uppercase tracking-widest text-[9px]">Payment Status</p><p className="font-bold mt-1">{order.paymentStatus}</p></div>
+                            <div><p className="text-neutral-400 font-bold uppercase tracking-widest text-[9px]">Order Date</p><p className="font-bold mt-1">{order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}</p></div>
                           </div>
+
+                          {/* Shipping Address */}
+                          {order.shippingAddress && (
+                            <div>
+                              <p className="text-neutral-400 font-bold uppercase tracking-widest text-[9px] mb-2">Shipping Address</p>
+                              <p className="text-xs leading-relaxed text-neutral-700 bg-neutral-50 p-3 border border-neutral-100">{order.shippingAddress}</p>
+                            </div>
+                          )}
+
+                          {/* Order Items */}
+                          {order.items && order.items.length > 0 && (
+                            <div>
+                              <p className="text-neutral-400 font-bold uppercase tracking-widest text-[9px] mb-3">Order Items</p>
+                              <div className="space-y-3">
+                                {order.items.map((item) => (
+                                  <div key={item.id} className="flex gap-3 p-3 bg-neutral-50 border border-neutral-100">
+                                    {item.product?.images?.[0] && (
+                                      <img 
+                                        src={item.product.images[0]} 
+                                        alt={item.product.name} 
+                                        className="w-16 h-20 object-cover flex-shrink-0"
+                                      />
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-xs font-bold uppercase tracking-widest truncate">{item.product?.name || 'Unknown Product'}</p>
+                                      <div className="flex items-center justify-between gap-2 mt-2">
+                                        <p className="text-[10px] text-neutral-400">Qty: <span className="font-bold">{item.quantity}</span></p>
+                                        <p className="text-sm font-serif font-bold">${(item.product?.price ? item.product.price * item.quantity : 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                                      </div>
+                                      <p className="text-[10px] text-neutral-500 mt-1">Unit: ${item.product?.price ? item.product.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '0.00'}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Order Total */}
+                          <div className="flex justify-between items-center p-3 bg-brand-onyx text-brand-cream rounded">
+                            <p className="font-bold uppercase tracking-widest text-[10px]">Order Total</p>
+                            <p className="text-lg font-serif">${order.total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
+                          </div>
+
+                          {/* Order Notes */}
+                          {order.notes && (
+                            <div>
+                              <p className="text-neutral-400 font-bold uppercase tracking-widest text-[9px] mb-2">Order Notes</p>
+                              <p className="text-xs text-neutral-700 bg-neutral-50 p-3 border border-neutral-100">{order.notes}</p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

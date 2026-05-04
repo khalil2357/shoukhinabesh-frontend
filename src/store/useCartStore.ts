@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import api from '../api/axios';
+import { useAuthStore } from './useAuthStore';
 
 export interface CartProduct {
   id: string;
@@ -48,6 +49,12 @@ export const useCartStore = create<CartState>((set, get) => ({
   itemCount: 0,
 
   fetchCart: async () => {
+    const { token, hasHydrated } = useAuthStore.getState();
+    if (!hasHydrated || !token) {
+      set({ cart: null, itemCount: 0, loading: false });
+      return;
+    }
+
     set({ loading: true });
     try {
       const res = await api.get('/cart');
@@ -64,6 +71,11 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   addItem: async (productId, quantity) => {
+    const { token, hasHydrated } = useAuthStore.getState();
+    if (!hasHydrated || !token) {
+      throw new Error('You must be signed in to add items to the cart.');
+    }
+
     const res = await api.post('/cart/items', { productId, quantity });
     const cart = extractCart(res.data);
     set({
@@ -73,6 +85,11 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   updateItem: async (itemId, quantity) => {
+    const { token, hasHydrated } = useAuthStore.getState();
+    if (!hasHydrated || !token) {
+      throw new Error('You must be signed in to update cart items.');
+    }
+
     const res = await api.patch(`/cart/items/${itemId}`, { quantity });
     const cart = extractCart(res.data);
     set({
@@ -82,6 +99,11 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   removeItem: async (itemId) => {
+    const { token, hasHydrated } = useAuthStore.getState();
+    if (!hasHydrated || !token) {
+      throw new Error('You must be signed in to remove cart items.');
+    }
+
     const res = await api.delete(`/cart/items/${itemId}`);
     const cart = extractCart(res.data);
     set({
@@ -91,6 +113,12 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   clearCart: async () => {
+    const { token, hasHydrated } = useAuthStore.getState();
+    if (!hasHydrated || !token) {
+      set({ cart: null, itemCount: 0 });
+      return;
+    }
+
     await api.delete('/cart');
     set({ cart: null, itemCount: 0 });
   },
