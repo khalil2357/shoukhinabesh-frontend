@@ -191,7 +191,7 @@ export const Register = () => {
       {/* Right: Immersive Image (reversed) */}
       <div ref={imageRef} className="hidden lg:block lg:w-1/2 relative overflow-hidden h-screen sticky top-0">
         <img
-          src="https://images.unsplash.com/photo-1611085583191-a3b1318d454c?q=80&w=2000&auto=format&fit=crop"
+          src="https://images.unsplash.com/photo-1602173574767-37ac01994b2a?q=80&w=2000&auto=format&fit=crop"
           alt="Luxury Jewelry"
           className="w-full h-full object-cover"
         />
