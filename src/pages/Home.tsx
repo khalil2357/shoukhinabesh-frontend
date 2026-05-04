@@ -1,11 +1,40 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Star, Shield, Truck, RefreshCw } from 'lucide-react';
+import { ArrowRight, Star, Shield, Truck, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { categoriesService } from '../services/categories.service';
 import { productsService } from '../services/products.service';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface Category { id: string; name: string; slug: string; imageUrl?: string | null; }
 interface Product { id: string; name: string; slug: string; price: number; images: string[]; category?: { name: string } | null; }
+
+const HERO_SLIDES = [
+  {
+    title: "Timeless Elegance",
+    subtitle: "Liquid Gold Collection",
+    desc: "Masterfully crafted pieces that celebrate the beauty of 24k recycled gold.",
+    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2000&auto=format&fit=crop",
+    link: "/shop?search=gold"
+  },
+  {
+    title: "Brilliant Cuts",
+    subtitle: "The Diamond Edit",
+    desc: "Ethically sourced diamonds, cut to perfection by Milanese master artisans.",
+    image: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?q=80&w=2000&auto=format&fit=crop",
+    link: "/shop?categoryId=rings"
+  },
+  {
+    title: "Modern Heritage",
+    subtitle: "Bespoke Creations",
+    desc: "Unique stories told through handcrafted jewelry, tailored exclusively for you.",
+    image: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=2000&auto=format&fit=crop",
+    link: "/shop"
+  }
+];
 
 const CATEGORY_IMAGES: Record<string, string> = {
   default: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=800&auto=format&fit=crop',
@@ -21,17 +50,57 @@ const FALLBACK_PRODUCTS: Product[] = [
   { id: '3', name: 'Sapphire Pendant', slug: 'sapphire-pendant', price: 3200, images: ['https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=800'], category: { name: 'Necklaces' } },
 ];
 
-const features = [
-  { icon: Shield, title: 'Authenticated Gems', desc: 'Every stone certified by GIA' },
-  { icon: Truck, title: 'Complimentary Shipping', desc: 'Worldwide on all orders' },
-  { icon: RefreshCw, title: 'Easy Returns', desc: 'Hassle-free 30-day policy' },
-  { icon: Star, title: 'Artisan Crafted', desc: 'Hand-finished in Milan' },
-];
-
 export const Home = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>(FALLBACK_PRODUCTS);
   const [loadingCats, setLoadingCats] = useState(true);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sliderRef = useRef<HTMLDivElement>(null);
+  const slidesRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  useGSAP(() => {
+    // Reveal animations for sections
+    const sections = gsap.utils.toArray('.reveal-section');
+    sections.forEach((section: any) => {
+      gsap.fromTo(section, 
+        { y: 50, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: section,
+            start: 'top 85%',
+            toggleActions: 'play none none reverse'
+          }
+        }
+      );
+    });
+
+    // Parallax background text
+    gsap.to('.parallax-text', {
+      scrollTrigger: {
+        trigger: '.parallax-container',
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: 1
+      },
+      x: -200,
+      ease: 'none'
+    });
+
+    // Floating animation for craft image
+    gsap.to('.floating-img', {
+      y: 30,
+      duration: 3,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut'
+    });
+  }, { scope: containerRef });
 
   useEffect(() => {
     categoriesService.getCategories()
@@ -52,6 +121,32 @@ export const Home = () => {
       .catch(() => {});
   }, []);
 
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+  };
+
+  useGSAP(() => {
+    if (!sliderRef.current) return;
+    
+    const activeSlide = slidesRef.current[currentSlide];
+    if (!activeSlide) return;
+
+    // Slide transition
+    gsap.fromTo(activeSlide.querySelector('.slide-bg'),
+      { scale: 1.2 },
+      { scale: 1, duration: 2, ease: 'power2.out' }
+    );
+
+    gsap.fromTo(activeSlide.querySelectorAll('.slide-content > *'),
+      { y: 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 1, stagger: 0.1, ease: 'power3.out', delay: 0.3 }
+    );
+  }, [currentSlide]);
+
   const getCatImage = (cat: Category) => {
     if (cat.imageUrl) return cat.imageUrl;
     const key = cat.name.toLowerCase();
@@ -59,169 +154,231 @@ export const Home = () => {
   };
 
   return (
-    <div className="pt-16">
-      {/* Hero */}
-      <section className="relative h-[92vh] flex items-center justify-center overflow-hidden bg-[#fafaf8]">
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-          <span className="text-[22vw] font-serif font-black text-brand-onyx/[0.03] leading-none tracking-tighter">GOLD</span>
-        </div>
-        <div className="container mx-auto px-6 text-center z-10 space-y-8">
-          <span className="text-[10px] uppercase font-bold tracking-[0.6em] text-neutral-400 block animate-fadeInUp">
-            Timeless Elegance · Ethically Sourced · Artisan Made
-          </span>
-          <h1 className="text-5xl md:text-7xl lg:text-9xl font-serif font-bold leading-[0.88] tracking-tighter animate-fadeInUp">
-            Rare Finds.<br />
-            <span className="italic font-normal text-brand-gold">Pure Gold.</span>
-          </h1>
-          <p className="text-sm text-neutral-500 max-w-md mx-auto font-light leading-relaxed animate-fadeInUp">
-            Each piece is a testament to master craftsmanship — ethically sourced diamonds, 24k recycled gold, and stories worth wearing.
-          </p>
-          <div className="flex flex-col md:flex-row gap-6 justify-center items-center animate-fadeInUp">
-            <Link to="/shop" id="hero-shop-btn" className="premium-btn min-w-[220px] text-[11px] tracking-[0.3em]">
-              Explore the Collection
-            </Link>
-            <Link to="/shop" className="text-[10px] font-bold uppercase tracking-[0.3em] border-b border-brand-onyx pb-1.5 hover:opacity-60 transition-opacity flex items-center gap-2">
-              View Lookbook <ArrowRight className="w-3 h-3" />
-            </Link>
+    <div ref={containerRef} className="overflow-x-hidden">
+      {/* Hero Slider */}
+      <section className="relative h-screen w-full overflow-hidden bg-brand-onyx" ref={sliderRef}>
+        {HERO_SLIDES.map((slide, i) => (
+          <div
+            key={i}
+            ref={(el) => (slidesRef.current[i] = el)}
+            className={`absolute inset-0 transition-opacity duration-1000 ${currentSlide === i ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
+          >
+            <div 
+              className="slide-bg absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${slide.image})` }}
+            >
+              <div className="absolute inset-0 bg-brand-onyx/40" />
+            </div>
+            <div className="relative h-full container mx-auto px-6 md:px-12 flex flex-col justify-center slide-content">
+              <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.6em] text-brand-gold mb-4 block">
+                {slide.subtitle}
+              </span>
+              <h1 className="text-6xl md:text-8xl lg:text-[10rem] font-serif font-bold text-brand-cream leading-[0.9] tracking-tighter mb-8 max-w-4xl">
+                {slide.title.split(' ')[0]} <br />
+                <span className="italic font-normal ml-[0.1em]">{slide.title.split(' ')[1]}</span>
+              </h1>
+              <p className="text-sm md:text-base text-neutral-300 max-w-md font-light leading-relaxed mb-10">
+                {slide.desc}
+              </p>
+              <div className="flex items-center gap-8">
+                <Link to={slide.link} className="premium-btn px-10 py-4 text-[11px] tracking-[0.3em] bg-brand-cream text-brand-onyx hover:bg-white transition-colors">
+                  Explore Now
+                </Link>
+                <div className="hidden md:flex items-center gap-4 text-brand-cream text-[10px] font-bold uppercase tracking-widest">
+                  <span className="w-12 h-[1px] bg-brand-gold" />
+                  Scroll to Discover
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-30">
-          <div className="w-[1px] h-12 bg-brand-onyx" />
-          <span className="text-[8px] font-bold uppercase tracking-[0.4em]">Scroll</span>
+        ))}
+
+        {/* Slider Controls */}
+        <div className="absolute bottom-12 right-12 z-20 flex items-center gap-6">
+          <button onClick={prevSlide} className="p-3 border border-brand-cream/20 text-brand-cream hover:bg-brand-cream hover:text-brand-onyx transition-all">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex gap-2">
+            {HERO_SLIDES.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentSlide(i)}
+                className={`w-2 h-2 rounded-full transition-all ${currentSlide === i ? 'bg-brand-gold w-8' : 'bg-brand-cream/30'}`}
+              />
+            ))}
+          </div>
+          <button onClick={nextSlide} className="p-3 border border-brand-cream/20 text-brand-cream hover:bg-brand-cream hover:text-brand-onyx transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
         </div>
       </section>
 
-      {/* Feature strip */}
-      <section className="bg-brand-onyx text-brand-cream py-5 px-6 md:px-12">
-        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
-          {features.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="flex items-center gap-3">
-              <Icon className="w-4 h-4 text-brand-gold shrink-0" />
+      {/* Feature Strip */}
+      <section className="bg-brand-cream border-b border-neutral-200/40 py-8 px-6 md:px-12">
+        <div className="max-w-7xl mx-auto flex flex-wrap justify-between gap-8">
+          {[
+            { icon: Shield, title: 'Certified Gems', desc: 'GIA Authenticated stones' },
+            { icon: Truck, title: 'Global Express', desc: 'Complimentary shipping' },
+            { icon: RefreshCw, title: 'Care & Returns', desc: '30-day luxury guarantee' },
+            { icon: Star, title: 'Milanese Craft', desc: 'Hand-finished perfection' },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="flex items-center gap-4 group">
+              <div className="w-10 h-10 rounded-full border border-neutral-200 flex items-center justify-center group-hover:bg-brand-onyx group-hover:text-brand-cream transition-all duration-500">
+                <Icon className="w-4 h-4" />
+              </div>
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-widest">{title}</p>
-                <p className="text-[9px] text-neutral-500 mt-0.5">{desc}</p>
+                <p className="text-[9px] text-neutral-400 mt-0.5">{desc}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="section-padding bg-white">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-            <div>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3 block">Browse by Category</span>
-              <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter">Shop the Collection</h2>
-            </div>
-            <Link to="/shop" className="text-[10px] font-bold uppercase tracking-[0.2em] border-b border-neutral-300 hover:border-brand-onyx transition-all pb-1 whitespace-nowrap">All Pieces</Link>
-          </div>
-          {loadingCats ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {Array.from({ length: 6 }).map((_, i) => <div key={i} className="aspect-square skeleton" />)}
-            </div>
-          ) : categories.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {categories.map((cat) => (
-                <Link key={cat.id} to={`/shop?categoryId=${cat.id}`} className="group relative aspect-square overflow-hidden bg-neutral-100">
-                  <img src={getCatImage(cat)} alt={cat.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
-                  <div className="absolute inset-0 bg-brand-onyx/30 group-hover:bg-brand-onyx/50 transition-colors duration-300" />
-                  <div className="absolute inset-0 flex items-end p-4">
-                    <p className="text-brand-cream text-[10px] font-bold uppercase tracking-widest">{cat.name}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {(['Rings', 'Necklaces', 'Earrings', 'Bracelets'] as const).map((name) => (
-                <Link key={name} to={`/shop?search=${name.toLowerCase()}`} className="group relative aspect-[3/4] overflow-hidden bg-neutral-100">
-                  <img src={CATEGORY_IMAGES[name.toLowerCase() as keyof typeof CATEGORY_IMAGES]} alt={name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy" />
-                  <div className="absolute inset-0 bg-brand-onyx/25 group-hover:bg-brand-onyx/45 transition-colors" />
-                  <div className="absolute inset-0 flex items-end p-6">
-                    <p className="text-brand-cream text-xs font-bold uppercase tracking-widest">{name}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+      {/* Parallax Section: The Essence */}
+      <section className="parallax-container relative py-32 overflow-hidden bg-white">
+        <div className="parallax-text absolute top-1/2 left-0 -translate-y-1/2 text-[25vw] font-serif font-black text-neutral-100/80 whitespace-nowrap pointer-events-none select-none uppercase">
+          Shoukhinabesh Craft
         </div>
-      </section>
-
-      {/* Craftsmanship */}
-      <section className="section-padding grid grid-cols-1 lg:grid-cols-2 gap-20 items-center bg-brand-cream">
-        <div className="relative aspect-[4/5] overflow-hidden group">
-          <img src="https://images.unsplash.com/photo-1573408301185-9146fe634ad0?q=80&w=1000&auto=format&fit=crop" alt="Craftsmanship" className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" loading="lazy" />
-          <div className="absolute bottom-8 left-8 bg-brand-cream/95 p-5 max-w-[200px]">
-            <p className="text-2xl font-serif font-bold">100%</p>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mt-1">Conflict-Free Gems</p>
-          </div>
-        </div>
-        <div className="space-y-10">
-          <div className="space-y-6">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-brand-gold">Our Promise</span>
-            <h2 className="text-4xl md:text-6xl font-serif font-bold leading-tight tracking-tighter">Crafted for the<br />extraordinary.</h2>
-            <p className="text-base text-neutral-500 leading-relaxed max-w-md font-light">
-              Every piece in our collection is a testament to the master jeweler's art. From ethically sourced diamonds to 24k recycled gold, we prioritize sustainability without compromising on luxury.
+        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-20 items-center relative z-10">
+          <div className="reveal-section space-y-8">
+            <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-brand-gold block">Master Artisans</span>
+            <h2 className="text-5xl md:text-7xl font-serif font-bold tracking-tighter leading-[0.95]">
+              Tradition Meets <br />
+              <span className="italic font-normal">the Extraordinary.</span>
+            </h2>
+            <p className="text-sm md:text-base text-neutral-500 max-w-md font-light leading-relaxed">
+              Every curve, every setting, and every reflection is born from decades of Milanese heritage. We don't just make jewelry; we craft legacies in 24k recycled gold.
             </p>
+            <Link to="/shop" className="inline-flex items-center gap-4 text-[10px] font-bold uppercase tracking-[0.3em] group">
+              Discover Our Story <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
+            </Link>
           </div>
-          <div className="grid grid-cols-2 gap-8 pt-4">
-            {[{ val: '100%', label: 'Ethically Sourced' }, { val: 'Hand', label: 'Finished in Milan' }, { val: '50+', label: 'Master Artisans' }, { val: '24k', label: 'Recycled Gold' }].map(({ val, label }) => (
-              <div key={label} className="space-y-1">
-                <p className="text-2xl font-serif font-bold">{val}</p>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">{label}</p>
-              </div>
-            ))}
-          </div>
-          <Link to="/shop" className="flex items-center gap-4 font-bold uppercase text-[10px] tracking-[0.3em] group pt-6">
-            Explore Craftsmanship <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
-          </Link>
-        </div>
-      </section>
-
-      {/* Featured products */}
-      <section className="section-padding bg-[#fafaf8]">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-            <div>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3 block">New Arrivals</span>
-              <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter">The Solitaire Collection</h2>
+          <div className="reveal-section relative">
+            <div className="aspect-[4/5] overflow-hidden group rounded-sm shadow-2xl">
+              <img 
+                src="https://images.unsplash.com/photo-1573408301185-9146fe634ad0?q=80&w=1000&auto=format&fit=crop" 
+                alt="Craftsmanship" 
+                className="floating-img w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-1000"
+              />
             </div>
-            <Link to="/shop" className="text-[10px] font-bold uppercase tracking-[0.2em] border-b border-neutral-300 hover:border-brand-onyx transition-all pb-1 whitespace-nowrap">View All Pieces</Link>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-            {featuredProducts.map((product) => (
-              <Link key={product.id} to={`/product/${product.slug}`} className="group cursor-pointer block">
-                <div className="aspect-[3/4] bg-white overflow-hidden flex items-center justify-center relative mb-6">
-                  {product.images?.[0] ? (
-                    <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" loading="lazy" />
-                  ) : (
-                    <div className="w-full h-full skeleton" />
-                  )}
-                  <div className="absolute inset-0 bg-brand-onyx/0 group-hover:bg-brand-onyx/10 transition-colors duration-500" />
-                </div>
-                <div className="text-center space-y-2">
-                  {product.category?.name && <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">{product.category.name}</span>}
-                  <h3 className="text-sm font-bold uppercase tracking-widest">{product.name}</h3>
-                  <p className="text-base font-serif text-brand-gold">${Number(product.price).toLocaleString()}</p>
-                </div>
-              </Link>
-            ))}
+            <div className="absolute -bottom-10 -left-10 bg-brand-onyx p-8 text-brand-cream max-w-[200px] hidden md:block reveal-section">
+              <p className="text-3xl font-serif font-bold mb-2">100%</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">Ethically sourced conflict-free diamonds</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* CTA banner */}
-      <section className="h-[60vh] relative overflow-hidden flex items-center justify-center">
-        <div className="absolute inset-0 bg-cover bg-fixed bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?q=80&w=2000&auto=format&fit=crop')" }} />
-        <div className="absolute inset-0 bg-brand-onyx/55" />
-        <div className="z-10 text-center text-brand-cream space-y-8 px-6 max-w-2xl">
-          <span className="text-[9px] font-bold uppercase tracking-[0.5em] text-brand-gold block">Exclusively Yours</span>
-          <h2 className="text-4xl md:text-6xl font-serif font-bold tracking-tighter">Bespoke Creations</h2>
-          <p className="text-sm uppercase tracking-[0.4em] font-light text-neutral-300">Custom designs tailored to your unique story</p>
-          <Link to="/shop" className="inline-flex items-center gap-3 px-8 py-3 bg-brand-cream text-brand-onyx text-[11px] font-bold tracking-[0.3em] uppercase hover:bg-white transition-colors">
-            Begin Your Journey <ArrowRight className="w-4 h-4" />
-          </Link>
+      {/* Categories: The Grid */}
+      <section className="py-32 bg-[#fafaf8] reveal-section">
+        <div className="max-w-7xl mx-auto px-6 md:px-12">
+          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+            <div className="reveal-section">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-3 block">Curated Collections</span>
+              <h2 className="text-4xl md:text-5xl font-serif font-bold tracking-tighter">Shop by Category</h2>
+            </div>
+            <Link to="/shop" className="text-[10px] font-bold uppercase tracking-[0.2em] border-b border-neutral-300 hover:border-brand-onyx transition-all pb-1 whitespace-nowrap">Explore All</Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {loadingCats ? (
+              Array.from({ length: 4 }).map((_, i) => <div key={i} className="aspect-[3/4] skeleton" />)
+            ) : categories.length > 0 ? (
+              categories.map((cat, i) => (
+                <Link 
+                  key={cat.id} 
+                  to={`/shop?categoryId=${cat.id}`} 
+                  className={`reveal-section group relative aspect-[3/4] overflow-hidden bg-neutral-100 ${i % 2 !== 0 ? 'lg:translate-y-12' : ''}`}
+                >
+                  <img src={getCatImage(cat)} alt={cat.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-brand-onyx/20 group-hover:bg-brand-onyx/40 transition-colors duration-500" />
+                  <div className="absolute inset-0 flex flex-col justify-end p-8">
+                    <p className="text-brand-cream text-[10px] font-bold uppercase tracking-[0.4em] mb-2">{cat.name}</p>
+                    <div className="h-[1px] w-0 group-hover:w-full bg-brand-gold transition-all duration-700" />
+                  </div>
+                </Link>
+              ))
+            ) : (
+              (['Rings', 'Necklaces', 'Earrings', 'Bracelets'] as const).map((name, i) => (
+                <Link 
+                  key={name} 
+                  to={`/shop?search=${name.toLowerCase()}`} 
+                  className={`reveal-section group relative aspect-[3/4] overflow-hidden bg-neutral-100 ${i % 2 !== 0 ? 'lg:translate-y-12' : ''}`}
+                >
+                  <img src={CATEGORY_IMAGES[name.toLowerCase() as keyof typeof CATEGORY_IMAGES]} alt={name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" />
+                  <div className="absolute inset-0 bg-brand-onyx/20 group-hover:bg-brand-onyx/40 transition-colors duration-500" />
+                  <div className="absolute inset-0 flex flex-col justify-end p-8">
+                    <p className="text-brand-cream text-[10px] font-bold uppercase tracking-[0.4em] mb-2">{name}</p>
+                    <div className="h-[1px] w-0 group-hover:w-full bg-brand-gold transition-all duration-700" />
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* New Arrivals: The Showcase */}
+      <section className="py-40 bg-white">
+        <div className="max-w-7xl mx-auto px-6 md:px-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-20">
+            <div className="lg:col-span-4 reveal-section">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400 mb-4 block">New Season</span>
+              <h2 className="text-5xl font-serif font-bold tracking-tighter mb-8 leading-none">The Solitaire<br />Edit.</h2>
+              <p className="text-sm text-neutral-500 font-light leading-relaxed mb-10">
+                Introducing our most anticipated collection of the year. Minimalist settings designed to let the stones speak for themselves.
+              </p>
+              <Link to="/shop" className="premium-btn inline-block px-10 py-4 text-[10px]">View Full Collection</Link>
+            </div>
+            <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+              {featuredProducts.slice(0, 2).map((product, i) => (
+                <Link 
+                  key={product.id} 
+                  to={`/product/${product.slug}`} 
+                  className={`reveal-section group block ${i === 1 ? 'md:translate-y-24' : ''}`}
+                >
+                  <div className="aspect-[4/5] bg-neutral-50 overflow-hidden mb-6 relative">
+                    <img 
+                      src={product.images[0] || 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338'} 
+                      alt={product.name} 
+                      className="w-full h-full object-cover grayscale-[0.4] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">{product.category?.name}</span>
+                    <h3 className="text-sm font-bold uppercase tracking-widest group-hover:text-brand-gold transition-colors">{product.name}</h3>
+                    <p className="text-base font-serif text-brand-gold">${Number(product.price).toLocaleString()}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA: Full Screen Immersive */}
+      <section className="relative h-[80vh] flex items-center justify-center overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center scale-110" 
+          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1588444837495-c6cfcb53ba8d?q=80&w=2000&auto=format&fit=crop')" }}
+        >
+          <div className="absolute inset-0 bg-brand-onyx/60 backdrop-blur-[2px]" />
+        </div>
+        <div className="relative z-10 text-center space-y-10 px-6 reveal-section">
+          <span className="text-[10px] font-bold uppercase tracking-[0.6em] text-brand-gold">Exclusively Yours</span>
+          <h2 className="text-5xl md:text-8xl font-serif font-bold text-brand-cream tracking-tighter leading-none">
+            A Journey of <br />
+            <span className="italic font-normal">Pure Brilliance.</span>
+          </h2>
+          <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
+            <Link to="/register" className="premium-btn px-12 py-4 bg-brand-cream text-brand-onyx hover:bg-white transition-colors">
+              Create an Account
+            </Link>
+            <Link to="/shop" className="text-brand-cream text-[10px] font-bold uppercase tracking-[0.4em] border-b border-brand-cream/30 hover:border-brand-gold pb-2 transition-all">
+              Discover the Shop
+            </Link>
+          </div>
         </div>
       </section>
     </div>
