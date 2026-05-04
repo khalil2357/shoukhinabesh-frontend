@@ -5,6 +5,7 @@ import { productsService } from '../services/products.service';
 import { reviewsService } from '../services/reviews.service';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useWishlistStore } from '../store/useWishlistStore';
 
 interface Review { id: string; rating: number; comment: string; createdAt?: string; user?: { name?: string; email?: string } | null; }
 interface Product {
@@ -60,6 +61,7 @@ export const ProductDetail = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAuthStore();
   const { addItem } = useCartStore();
+  const { toggleWishlist, isInWishlist, fetchWishlist } = useWishlistStore();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -90,7 +92,11 @@ export const ProductDetail = () => {
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false));
-  }, [slug]);
+
+    if (isAuthenticated) {
+      fetchWishlist().catch(() => {});
+    }
+  }, [slug, isAuthenticated, fetchWishlist]);
 
   const handleAddToCart = async () => {
     if (!isAuthenticated) { window.location.href = '/login'; return; }
@@ -112,6 +118,19 @@ export const ProductDetail = () => {
       setAdding(false);
     }
   };
+
+  const handleWishlistToggle = async () => {
+    if (!isAuthenticated) { navigate('/login'); return; }
+    if (!product) return;
+    try {
+      await toggleWishlist(product.id);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const isFavorite = product ? isInWishlist(product.id) : false;
+
 
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,8 +263,12 @@ export const ProductDetail = () => {
                     <ShoppingBag className="w-4 h-4" />
                     {adding ? 'Adding...' : 'Add to Cart'}
                   </button>
-                  <button className="p-3 border border-neutral-200 hover:bg-neutral-50 transition-colors" aria-label="Wishlist">
-                    <Heart className="w-4 h-4" />
+                  <button 
+                    onClick={handleWishlistToggle}
+                    className={`p-3 border transition-colors ${isFavorite ? 'bg-brand-onyx border-brand-onyx text-brand-cream' : 'border-neutral-200 hover:bg-neutral-50 text-neutral-600'}`} 
+                    aria-label="Wishlist"
+                  >
+                    <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
                   </button>
                 </div>
                 {addedMsg && <p className={`text-[10px] font-bold uppercase tracking-widest ${addedMsg.includes('Failed') ? 'text-rose-500' : 'text-green-600'}`}>{addedMsg}</p>}
