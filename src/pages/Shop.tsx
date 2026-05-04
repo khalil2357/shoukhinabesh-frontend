@@ -101,6 +101,20 @@ export const Shop = () => {
     fetchProducts();
   }, [fetchProducts]);
 
+  useEffect(() => {
+    const s = searchParams.get('search') || '';
+    const c = searchParams.get('categoryId') || '';
+    const min = searchParams.get('minPrice') || '';
+    const max = searchParams.get('maxPrice') || '';
+    const p = Number(searchParams.get('page')) || 1;
+
+    setSearch(s);
+    setCategoryId(c);
+    setMinPrice(min);
+    setMaxPrice(max);
+    setPage(p);
+  }, [searchParams]);
+
   const applyFilters = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(1);
