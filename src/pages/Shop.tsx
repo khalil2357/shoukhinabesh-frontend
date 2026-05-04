@@ -1,10 +1,12 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ChevronLeft, ChevronRight, ShoppingBag } from 'lucide-react';
 import { productsService } from '../services/products.service';
 import { categoriesService } from '../services/categories.service';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/useAuthStore';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 
 interface Product {
   id: string; name: string; slug: string; price: number;
@@ -21,7 +23,7 @@ const SORT_OPTIONS = [
 
 const SkeletonCard = () => (
   <div className="space-y-4">
-    <div className="aspect-[3/4] skeleton" />
+    <div className="aspect-[3/4] skeleton rounded-sm" />
     <div className="space-y-2">
       <div className="h-3 skeleton w-2/3 mx-auto" />
       <div className="h-4 skeleton w-1/2 mx-auto" />
@@ -43,6 +45,9 @@ export const Shop = () => {
   const [filterOpen, setFilterOpen] = useState(false);
   const [cartMsg, setCartMsg] = useState('');
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
   // Filter state
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [categoryId, setCategoryId] = useState(searchParams.get('categoryId') || '');
@@ -51,6 +56,29 @@ export const Shop = () => {
   const [sortValue, setSortValue] = useState('createdAt-desc');
   const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
   const LIMIT = 12;
+
+  useGSAP(() => {
+    // Initial entrance
+    const tl = gsap.timeline();
+    tl.fromTo('.shop-header', 
+      { y: 30, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }
+    )
+    .fromTo('.shop-sidebar', 
+      { x: -30, opacity: 0 },
+      { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out' },
+      '-=0.6'
+    );
+  }, { scope: containerRef });
+
+  useGSAP(() => {
+    if (!loading && products.length > 0) {
+      gsap.fromTo('.product-card', 
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.6, stagger: 0.05, ease: 'power2.out' }
+      );
+    }
+  }, [loading, products]);
 
   useEffect(() => {
     categoriesService.getCategories().then((res) => {
@@ -163,72 +191,84 @@ export const Shop = () => {
   const hasActiveFilters = !!(search || categoryId || minPrice || maxPrice);
 
   return (
-    <div className="pt-24 pb-24 min-h-screen">
+    <div ref={containerRef} className="pt-32 pb-32 min-h-screen bg-[#fafaf8]">
       {/* Header */}
-      <div className="px-6 md:px-12 lg:px-24 mb-12">
+      <div className="px-6 md:px-12 lg:px-24 mb-20 shop-header">
         <div className="max-w-7xl mx-auto">
-          <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400 mb-3 block">The Collection</span>
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-            <h1 className="text-5xl md:text-6xl font-serif font-bold tracking-tighter">All Jewellery</h1>
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10">
+            <div className="space-y-4">
+              <span className="text-[10px] font-bold uppercase tracking-[0.6em] text-brand-gold block">Curated Collection</span>
+              <h1 className="text-6xl md:text-8xl font-serif font-bold tracking-tighter leading-[0.85]">
+                Fine <br />
+                <span className="italic font-normal">Jewellery.</span>
+              </h1>
+            </div>
+            <div className="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
               {hasActiveFilters && (
-                <button onClick={clearFilters} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-rose-500 hover:text-rose-600 transition-colors">
-                  <X className="w-3 h-3" /> Clear Filters
+                <button onClick={clearFilters} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-rose-500 hover:text-rose-600 transition-colors">
+                  <X className="w-3 h-3" /> Reset
                 </button>
               )}
-              <select
-                value={sortValue}
-                onChange={(e) => { setSortValue(e.target.value); setPage(1); }}
-                className="border border-neutral-200 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-widest focus:outline-none focus:border-brand-onyx"
-              >
-                {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
+              <div className="relative group w-full md:w-64">
+                <select
+                  value={sortValue}
+                  onChange={(e) => { setSortValue(e.target.value); setPage(1); }}
+                  className="w-full appearance-none border-b border-neutral-200 bg-transparent py-2 text-[11px] font-bold uppercase tracking-widest focus:outline-none focus:border-brand-onyx transition-colors cursor-pointer"
+                >
+                  {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 group-hover:text-brand-onyx transition-colors">
+                  <ChevronRight className="w-3 h-3 rotate-90" />
+                </div>
+              </div>
               <button
                 onClick={() => setFilterOpen(!filterOpen)}
-                className="md:hidden flex items-center gap-2 border border-neutral-200 px-4 py-2 text-[11px] font-bold uppercase tracking-widest"
+                className="lg:hidden flex items-center justify-center gap-2 border border-brand-onyx px-8 py-3 w-full text-[10px] font-bold uppercase tracking-widest hover:bg-brand-onyx hover:text-brand-cream transition-all"
               >
                 <SlidersHorizontal className="w-3 h-3" /> Filters
               </button>
             </div>
           </div>
-          {total > 0 && <p className="text-[10px] text-neutral-400 mt-3 font-bold uppercase tracking-widest">{total} pieces found</p>}
-          {cartMsg && <p className="text-[10px] font-bold uppercase tracking-widest text-brand-onyx mt-3">{cartMsg}</p>}
+          <div className="flex justify-between items-center mt-8 border-t border-neutral-100 pt-6">
+            <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{total} pieces in vault</p>
+            {cartMsg && <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold animate-fadeIn">{cartMsg}</p>}
+          </div>
         </div>
       </div>
 
       <div className="px-6 md:px-12 lg:px-24">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-20">
           {/* Sidebar Filters */}
-          <aside className={`w-full lg:w-64 shrink-0 space-y-10 ${filterOpen ? 'block' : 'hidden lg:block'}`}>
-            <form onSubmit={applyFilters} className="space-y-8">
+          <aside className={`w-full lg:w-72 shrink-0 space-y-12 shop-sidebar ${filterOpen ? 'block' : 'hidden lg:block'}`}>
+            <form onSubmit={applyFilters} className="space-y-12">
               {/* Search */}
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 border-b border-neutral-100 pb-2">Search</h4>
-                <div className="flex items-center border border-neutral-200 focus-within:border-brand-onyx transition-colors">
-                  <Search className="w-4 h-4 ml-3 text-neutral-400 shrink-0" />
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-400 border-b border-neutral-100 pb-3">Search</h4>
+                <div className="flex items-center border-b border-neutral-200 focus-within:border-brand-onyx transition-all duration-500">
+                  <Search className="w-4 h-4 text-neutral-300 shrink-0" />
                   <input
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search pieces..."
-                    className="flex-1 px-3 py-2.5 text-sm bg-transparent focus:outline-none"
+                    placeholder="Keywords..."
+                    className="flex-1 px-4 py-3 text-sm bg-transparent focus:outline-none placeholder:text-neutral-200"
                     id="shop-search-input"
                   />
                 </div>
               </div>
 
               {/* Categories */}
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 border-b border-neutral-100 pb-2">Category</h4>
-                <ul className="space-y-2">
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-400 border-b border-neutral-100 pb-3">Collection</h4>
+                <ul className="space-y-3">
                   <li>
-                    <button type="button" onClick={() => setCategoryId('')} className={`text-sm w-full text-left py-1 transition-colors ${!categoryId ? 'font-bold text-brand-onyx' : 'text-neutral-500 hover:text-brand-onyx'}`}>
-                      All Pieces
+                    <button type="button" onClick={() => setCategoryId('')} className={`text-[11px] uppercase tracking-widest w-full text-left py-1.5 transition-all ${!categoryId ? 'font-black text-brand-onyx translate-x-2' : 'text-neutral-400 hover:text-brand-onyx hover:translate-x-1'}`}>
+                      All Masterpieces
                     </button>
                   </li>
                   {categories.map((cat) => (
                     <li key={cat.id}>
-                      <button type="button" onClick={() => setCategoryId(cat.id)} className={`text-sm w-full text-left py-1 transition-colors ${categoryId === cat.id ? 'font-bold text-brand-onyx' : 'text-neutral-500 hover:text-brand-onyx'}`}>
+                      <button type="button" onClick={() => setCategoryId(cat.id)} className={`text-[11px] uppercase tracking-widest w-full text-left py-1.5 transition-all ${categoryId === cat.id ? 'font-black text-brand-onyx translate-x-2' : 'text-neutral-400 hover:text-brand-onyx hover:translate-x-1'}`}>
                         {cat.name}
                       </button>
                     </li>
@@ -237,65 +277,75 @@ export const Shop = () => {
               </div>
 
               {/* Price range */}
-              <div className="space-y-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 border-b border-neutral-100 pb-2">Price Range</h4>
-                <div className="flex gap-3 items-center">
-                  <input type="number" min="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Min $" className="w-full border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:border-brand-onyx" id="min-price" />
-                  <span className="text-neutral-400 text-sm shrink-0">—</span>
-                  <input type="number" min="0" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Max $" className="w-full border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:border-brand-onyx" id="max-price" />
+              <div className="space-y-6">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-400 border-b border-neutral-100 pb-3">Price Point</h4>
+                <div className="flex gap-4 items-center">
+                  <input type="number" min="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Min $" className="w-full bg-transparent border-b border-neutral-200 px-2 py-3 text-sm focus:outline-none focus:border-brand-onyx transition-colors" id="min-price" />
+                  <span className="text-neutral-300 text-xs shrink-0">—</span>
+                  <input type="number" min="0" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Max $" className="w-full bg-transparent border-b border-neutral-200 px-2 py-3 text-sm focus:outline-none focus:border-brand-onyx transition-colors" id="max-price" />
                 </div>
               </div>
 
-              <button type="submit" className="w-full premium-btn text-[11px]">Apply Filters</button>
+              <button type="submit" className="w-full premium-btn text-[11px] py-4 bg-brand-onyx text-brand-cream hover:bg-black">Update Vault</button>
             </form>
           </aside>
 
           {/* Product Grid */}
-          <div className="flex-1">
+          <div className="flex-1" ref={gridRef}>
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-20">
                 {Array.from({ length: LIMIT }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
             ) : products.length === 0 ? (
-              <div className="text-center py-24 space-y-4">
-                <p className="text-4xl font-serif text-neutral-200">✦</p>
-                <p className="text-sm font-bold uppercase tracking-widest text-neutral-400">No pieces found</p>
-                <button onClick={clearFilters} className="text-[10px] font-bold uppercase tracking-widest text-brand-onyx border-b border-brand-onyx pb-1">Clear Filters</button>
+              <div className="text-center py-40 space-y-6">
+                <p className="text-6xl font-serif text-neutral-100">✦</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-400">The vault is currently empty</p>
+                <button onClick={clearFilters} className="text-[10px] font-bold uppercase tracking-widest text-brand-onyx border-b border-brand-onyx pb-1 hover:opacity-60 transition-opacity">Clear All Filters</button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-20">
                 {products.map((product) => (
-                  <div key={product.id} className="group">
-                    <Link to={`/product/${product.slug}`} className="block">
-                      <div className="aspect-[3/4] bg-white overflow-hidden mb-5 relative">
-                        {product.images?.[0] ? (
-                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
-                        ) : (
-                          <div className="w-full h-full bg-neutral-100 flex items-center justify-center">
-                            <span className="text-3xl text-neutral-300">✦</span>
-                          </div>
-                        )}
-                        {product.stock === 0 && (
-                          <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Sold Out</span>
-                          </div>
-                        )}
+                  <div key={product.id} className="group product-card">
+                    <Link to={`/product/${product.slug}`} className="block relative aspect-[4/5] overflow-hidden mb-8 bg-white rounded-sm">
+                      {product.images?.[0] ? (
+                        <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-110" loading="lazy" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-neutral-50">
+                          <span className="text-5xl text-neutral-100 italic font-serif">S</span>
+                        </div>
+                      )}
+                      
+                      {/* Overlay */}
+                      <div className="absolute inset-0 bg-brand-onyx/0 group-hover:bg-brand-onyx/40 transition-all duration-700 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 p-8">
+                        <button 
+                          onClick={(e) => { e.preventDefault(); handleAddToCart(product); }}
+                          disabled={addingId === product.id || product.stock === 0}
+                          className="bg-brand-cream text-brand-onyx w-full py-4 text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-white transition-colors flex items-center justify-center gap-3 translate-y-4 group-hover:translate-y-0 duration-700"
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                          {addingId === product.id ? 'Adding...' : 'Add to Vault'}
+                        </button>
                       </div>
+
+                      {product.stock === 0 && (
+                        <div className="absolute top-4 left-4 bg-white/90 px-3 py-1.5 backdrop-blur-md">
+                          <span className="text-[9px] font-black uppercase tracking-[0.3em] text-neutral-400">Reserved</span>
+                        </div>
+                      )}
                     </Link>
-                    <div className="text-center space-y-2">
-                      {product.category?.name && <span className="text-[9px] font-bold uppercase tracking-widest text-neutral-400">{product.category.name}</span>}
+                    
+                    <div className="text-center space-y-3">
+                      {product.category?.name && (
+                        <span className="text-[9px] font-bold uppercase tracking-[0.5em] text-brand-gold block mb-1">
+                          {product.category.name}
+                        </span>
+                      )}
                       <Link to={`/product/${product.slug}`}>
-                        <h3 className="text-xs font-bold uppercase tracking-widest hover:text-brand-gold transition-colors">{product.name}</h3>
+                        <h3 className="text-sm font-bold uppercase tracking-[0.2em] hover:text-brand-gold transition-colors leading-relaxed">
+                          {product.name}
+                        </h3>
                       </Link>
-                      <p className="text-sm font-serif text-brand-gold">${Number(product.price).toLocaleString()}</p>
-                      <button
-                        id={`add-to-cart-${product.id}`}
-                        onClick={() => handleAddToCart(product)}
-                        disabled={addingId === product.id || product.stock === 0}
-                        className="mt-3 w-full py-2.5 border border-brand-onyx text-[10px] font-bold uppercase tracking-widest hover:bg-brand-onyx hover:text-brand-cream transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {addingId === product.id ? 'Adding...' : product.stock === 0 ? 'Sold Out' : 'Add to Cart'}
-                      </button>
+                      <p className="text-lg font-serif text-brand-onyx">${Number(product.price).toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
@@ -304,21 +354,35 @@ export const Shop = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4 mt-16">
-                <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="p-2 border border-neutral-200 hover:border-brand-onyx transition-colors disabled:opacity-30">
-                  <ChevronLeft className="w-4 h-4" />
+              <div className="flex items-center justify-center gap-8 mt-32 border-t border-neutral-100 pt-12">
+                <button 
+                  onClick={() => { setPage(Math.max(1, page - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+                  disabled={page === 1} 
+                  className="p-4 border border-transparent hover:border-neutral-200 transition-all disabled:opacity-0"
+                >
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
-                <div className="flex gap-2">
+                <div className="flex gap-4">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     const p = page <= 3 ? i + 1 : page + i - 2;
                     if (p > totalPages) return null;
                     return (
-                      <button key={p} onClick={() => setPage(p)} className={`w-9 h-9 text-sm font-bold transition-colors ${p === page ? 'bg-brand-onyx text-brand-cream' : 'border border-neutral-200 hover:border-brand-onyx'}`}>{p}</button>
+                      <button 
+                        key={p} 
+                        onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+                        className={`w-12 h-12 text-[11px] font-black transition-all ${p === page ? 'bg-brand-onyx text-brand-cream' : 'text-neutral-400 hover:text-brand-onyx'}`}
+                      >
+                        {p < 10 ? `0${p}` : p}
+                      </button>
                     );
                   })}
                 </div>
-                <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} className="p-2 border border-neutral-200 hover:border-brand-onyx transition-colors disabled:opacity-30">
-                  <ChevronRight className="w-4 h-4" />
+                <button 
+                  onClick={() => { setPage(Math.min(totalPages, page + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+                  disabled={page === totalPages} 
+                  className="p-4 border border-transparent hover:border-neutral-200 transition-all disabled:opacity-0"
+                >
+                  <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
             )}

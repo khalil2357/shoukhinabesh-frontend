@@ -10,6 +10,7 @@ interface WishlistItem {
     slug: string;
     price: number;
     images: string[];
+    category?: { name: string } | null;
   };
 }
 

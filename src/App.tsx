@@ -15,6 +15,7 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import Cookies from './pages/Cookies';
+import { Wishlist } from './pages/Wishlist';
 import { useAuthStore } from './store/useAuthStore';
 import './App.css';
 
@@ -42,6 +43,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/wishlist" element={<Wishlist />} />
 
             {/* Checkout — requires auth */}
             <Route path="/checkout" element={
