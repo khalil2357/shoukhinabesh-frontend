@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { CreditCard, MapPin, Tag, Package, CheckCircle, ArrowLeft } from 'lucide-react';
 import { useCartStore } from '../store/useCartStore';
-import { ordersService } from '../services/orders.service';
+import { loadStripe } from '@stripe/stripe-js';
+import { ordersService, type StripePaymentIntentPayload } from '../services/orders.service';
 import { couponsService } from '../services/coupons.service';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -17,6 +18,9 @@ export const Checkout = () => {
   const location = useLocation();
   const { cart, fetchCart, clearCart } = useCartStore();
   const { user } = useAuthStore();
+  const cardElementRef = useRef<HTMLDivElement>(null);
+  const stripeRef = useRef<any>(null);
+  const elementsRef = useRef<any>(null);
 
   const [shippingAddress, setShippingAddress] = useState('');
   const [notes, setNotes] = useState('');
@@ -29,11 +33,43 @@ export const Checkout = () => {
   const [error, setError] = useState('');
   const [orderSuccess, setOrderSuccess] = useState<{ orderNumber: string; id: string } | null>(null);
 
+  // Card form state
+  const [cardholderName, setCardholderName] = useState('');
+  const [cardError, setCardError] = useState('');
+
   const canPlaceOrder = user?.role === 'CUSTOMER';
 
   useEffect(() => {
     fetchCart().catch(() => {});
   }, []);
+
+  // Initialize Stripe when component mounts
+  useEffect(() => {
+    const initStripe = async () => {
+      if (paymentMethod !== 'stripe' || !cardElementRef.current) return;
+
+      const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+      if (!publishableKey) {
+        setCardError('Missing Stripe configuration');
+        return;
+      }
+
+      if (!stripeRef.current) {
+        stripeRef.current = await loadStripe(publishableKey);
+      }
+
+      if (stripeRef.current && !elementsRef.current) {
+        elementsRef.current = stripeRef.current.elements();
+        const cardElement = elementsRef.current.create('card');
+        cardElement.mount(cardElementRef.current);
+        cardElement.addEventListener('change', (event: any) => {
+          setCardError(event.error ? event.error.message : '');
+        });
+      }
+    };
+
+    initStripe();
+  }, [paymentMethod]);
 
   if (!canPlaceOrder) {
     return (
@@ -92,38 +128,98 @@ export const Checkout = () => {
         await clearCart();
         setOrderSuccess({ orderNumber: order.orderNumber ?? order.id, id: order.id });
       } else if (paymentMethod === 'stripe') {
-        // Create Stripe session on backend and redirect to Checkout
-        const payload = {
+        if (!stripeRef.current || !elementsRef.current) {
+          throw new Error('Stripe not initialized. Please refresh and try again.');
+        }
+
+        if (!cardholderName.trim()) {
+          throw new Error('Cardholder name is required');
+        }
+
+        // Create Payment Intent with full order details
+        const intentPayload: StripePaymentIntentPayload = {
           amount: Math.round(total * 100),
           currency: 'usd',
-          items: cart.items.map((it: any) => ({ id: it.product.id, name: it.product.name, quantity: it.quantity, price: Math.round(it.product.price * 100) })),
+          items: cart.items.map((item) => ({
+            id: item.product.id,
+            name: item.product.name,
+            quantity: item.quantity,
+            price: Math.round(item.product.price * 100),
+          })),
           shippingAddress: shippingAddress.trim() || undefined,
           couponCode: coupon?.code || undefined,
           notes: notes.trim() || undefined,
+          customerName: cardholderName,
+          customerEmail: user?.email,
         };
-        const sessionRes = await ordersService.createStripeSession(payload);
-        const sessionId = sessionRes.data?.id ?? sessionRes.data?.sessionId ?? sessionRes.data?.data?.id;
-        if (!sessionId) throw new Error('Failed to create Stripe session');
 
-        const loadStripeJs = () => new Promise<void>((resolve, reject) => {
-          if ((window as any).Stripe) return resolve();
-          const s = document.createElement('script');
-          s.src = 'https://js.stripe.com/v3/';
-          s.onload = () => resolve();
-          s.onerror = () => reject(new Error('Failed to load Stripe.js'));
-          document.head.appendChild(s);
+        console.log('[Stripe] Creating payment intent with payload:', intentPayload);
+        let intentRes;
+        try {
+          intentRes = await ordersService.createStripePaymentIntent(intentPayload);
+          console.log('[Stripe] Payment intent response:', intentRes.data);
+        } catch (intentErr: unknown) {
+          const e = intentErr as any;
+          console.error('[Stripe] Payment intent error:', e);
+          console.error('[Stripe] Full error response:', e.response?.data);
+          if (e.response?.data?.errors && Array.isArray(e.response.data.errors)) {
+            console.error('[Stripe] Validation errors:', e.response.data.errors);
+            const errorList = e.response.data.errors.map((err: any) => {
+              if (typeof err === 'string') return err;
+              return `${err.field || err.path || 'unknown'}: ${err.message || JSON.stringify(err)}`;
+            }).join('; ');
+            throw new Error(`Payment setup failed: ${errorList}`);
+          }
+          const backendMsg = e.response?.data?.message || e.response?.data?.error || e.message;
+          throw new Error(`Payment setup failed: ${backendMsg || 'Unknown error'}`);
+        }
+
+        const clientSecret = intentRes.data?.clientSecret ?? intentRes.data?.data?.clientSecret;
+
+        if (!clientSecret) {
+          throw new Error('Failed to create payment intent: no clientSecret in response');
+        }
+
+        // Get card element and confirm payment
+        const cardElement = elementsRef.current.getElement('card');
+        const result = await stripeRef.current.confirmCardPayment(clientSecret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: { name: cardholderName },
+          },
         });
 
-        await loadStripeJs();
-        const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
-        if (!publishableKey) throw new Error('Missing Stripe publishable key');
-        const stripe = (window as any).Stripe(publishableKey);
-        const result = await stripe.redirectToCheckout({ sessionId });
-        if (result && result.error) throw result.error;
+        if (result.error) {
+          throw new Error(result.error.message || 'Payment failed');
+        }
+
+        if (result.paymentIntent.status === 'succeeded') {
+          // Payment successful, now place order
+          const res = await ordersService.placeOrder({
+            paymentMethod: 'STRIPE',
+            shippingAddress: shippingAddress.trim() || undefined,
+            couponCode: coupon?.code || undefined,
+            notes: notes.trim() || undefined,
+          });
+          const order = res.data?.data ?? res.data;
+          await clearCart();
+          setOrderSuccess({ orderNumber: order.orderNumber ?? order.id, id: order.id });
+        } else {
+          throw new Error(`Payment not completed. Status: ${result.paymentIntent.status}`);
+        }
       }
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } }; message?: string };
-      setError(e.response?.data?.message || e.message || 'Failed to place order. Please try again.');
+      const e = err as any;
+      console.error('[Checkout] Error:', e);
+      let errorMsg = 'Failed to place order. Please try again.';
+      if (e.response?.data?.message) {
+        errorMsg = e.response.data.message;
+      } else if (e.response?.data?.error) {
+        errorMsg = e.response.data.error;
+      } else if (e.message) {
+        errorMsg = e.message;
+      }
+      setError(errorMsg);
     } finally {
       setPlacing(false);
     }
@@ -229,6 +325,45 @@ export const Checkout = () => {
                 </div>
               </div>
 
+              {/* Card Details (Stripe) */}
+              {paymentMethod === 'stripe' && (
+                <div className="space-y-4 bg-neutral-50 border border-neutral-100 p-6">
+                  <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest border-b border-neutral-100 pb-4">
+                    <CreditCard className="w-4 h-4 text-brand-gold" /> Card Details
+                  </h2>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label htmlFor="cardholder-name" className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 block mb-2">
+                        Cardholder Name
+                      </label>
+                      <input
+                        id="cardholder-name"
+                        type="text"
+                        value={cardholderName}
+                        onChange={(e) => setCardholderName(e.target.value)}
+                        placeholder="Full name as it appears on card"
+                        className="w-full border border-neutral-200 px-4 py-3 text-sm focus:outline-none focus:border-brand-onyx bg-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="card-element" className="text-[10px] font-bold uppercase tracking-widest text-neutral-600 block mb-2">
+                        Card Information
+                      </label>
+                      <div 
+                        id="card-element"
+                        ref={cardElementRef}
+                        className="border border-neutral-200 px-4 py-3 bg-white rounded"
+                      />
+                      {cardError && (
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500 mt-2">{cardError}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Coupon */}
               <div className="space-y-4">
                 <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest border-b border-neutral-100 pb-4">
@@ -320,7 +455,9 @@ export const Checkout = () => {
                   {placing ? (
                     <><span className="spinner" /> Processing...</>
                   ) : (
-                    <><CreditCard className="w-4 h-4" /> Place Order — ${total.toLocaleString()}</>
+                    <>
+                      <CreditCard className="w-4 h-4" />
+                      {paymentMethod === 'stripe' ? 'Pay Now' : 'Place Order'} — ${total.toLocaleString()}</>
                   )}
                 </button>
 
