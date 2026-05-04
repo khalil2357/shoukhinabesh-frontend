@@ -260,22 +260,6 @@ export const Register = () => {
               </div>
             </div>
 
-            <div className="space-y-4 auth-reveal">
-              <label className="text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-400">Account Type</label>
-              <div className="flex gap-4">
-                {[{ val: 'CUSTOMER', label: 'Shop Pieces' }, { val: 'VENDOR', label: 'Sell Jewellery' }].map(({ val, label }) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, role: val })}
-                    className={`flex-1 py-4 text-[10px] font-bold uppercase tracking-widest border transition-all duration-500 ${formData.role === val ? 'border-brand-onyx bg-brand-onyx text-brand-cream' : 'border-neutral-200 text-neutral-400 hover:border-neutral-400'}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {error && <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500">{error}</p>}
 
             <div className="space-y-8 auth-reveal">
