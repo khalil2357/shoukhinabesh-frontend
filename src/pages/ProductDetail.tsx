@@ -71,13 +71,34 @@ export const ProductDetail = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
-  const [addedMsg, setAddedMsg] = useState('');
+  const [toastMsg, setToastMsg] = useState<{title: string, desc: string, type: 'success'|'error'} | null>(null);
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewMsg, setReviewMsg] = useState('');
 
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = (title: string, desc: string, type: 'success'|'error') => {
+    setToastMsg({ title, desc, type });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+
+    setTimeout(() => {
+      gsap.killTweensOf('.premium-toast');
+      gsap.fromTo('.premium-toast',
+        { x: 50, opacity: 0 },
+        { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }
+      );
+    }, 10);
+
+    toastTimerRef.current = setTimeout(() => {
+      gsap.to('.premium-toast', {
+        x: 50, opacity: 0, duration: 0.5, ease: 'power3.in',
+        onComplete: () => setToastMsg(null)
+      });
+    }, 4000);
+  };
 
   useEffect(() => {
     if (!slug) return;
@@ -133,15 +154,14 @@ export const ProductDetail = () => {
     setAdding(true);
     try {
       await addItem(product.id, quantity);
-      setAddedMsg('Added to vault.');
-      setTimeout(() => setAddedMsg(''), 3000);
+      showToast('Vault Updated', `${quantity} masterpiece${quantity > 1 ? 's' : ''} secured in your selection.`, 'success');
     } catch (error: any) {
       if (error?.response?.status === 401) {
         useAuthStore.getState().logout();
         navigate('/login');
         return;
       }
-      setAddedMsg('Submission error.');
+      showToast('Transaction Failed', 'Unable to secure item. Please try again.', 'error');
     } finally {
       setAdding(false);
     }
@@ -327,7 +347,6 @@ export const ProductDetail = () => {
                     <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
                   </button>
                 </div>
-                {addedMsg && <p className={`text-[10px] font-black uppercase tracking-[0.3em] text-center sm:text-left ${addedMsg.includes('Submission') ? 'text-rose-500' : 'text-brand-gold'} animate-fadeIn`}>{addedMsg}</p>}
               </div>
             )}
 
@@ -449,6 +468,19 @@ export const ProductDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Premium Toast Notification */}
+      {toastMsg && (
+        <div className="premium-toast fixed bottom-8 right-8 z-50 bg-white shadow-[0_30px_60px_rgba(0,0,0,0.1)] border border-neutral-100 p-6 flex items-start gap-5 max-w-sm">
+          <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${toastMsg.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-500'}`}>
+            {toastMsg.type === 'success' ? <ShieldCheck className="w-4 h-4" /> : <Star className="w-4 h-4" />}
+          </div>
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-onyx">{toastMsg.title}</h4>
+            <p className="text-xs text-neutral-500 mt-2 font-light leading-relaxed">{toastMsg.desc}</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
