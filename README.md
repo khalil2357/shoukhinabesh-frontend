@@ -1,96 +1,129 @@
-# React + TypeScript + Vite
+# Shoukhinabesh Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Modern React frontend for the Shoukhinabesh e-commerce platform.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This app includes:
 
-## React Compiler
+- Public storefront (home, shop, product detail)
+- Cart, wishlist, and checkout flows
+- Auth flows (register, login, forgot/reset password)
+- Role-aware dashboards (customer, vendor, admin)
+- API integration through Axios + bearer token interceptor
+- Client-side routing with React Router
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- React 19 + TypeScript
+- Vite 8
+- React Router
+- Axios
+- Zustand
+- Tailwind CSS (via Vite plugin)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Project Structure
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+shoukhinabesh-frontend/
+├─ public/
+├─ src/
+│  ├─ api/
+│  │  └─ axios.ts
+│  ├─ components/
+│  │  ├─ common/
+│  │  ├─ layout/
+│  │  ├─ product/
+│  │  └─ ui/
+│  ├─ pages/
+│  │  ├─ auth/
+│  │  ├─ account/
+│  │  ├─ vendor/
+│  │  ├─ admin/
+│  │  ├─ Home.tsx
+│  │  ├─ Shop.tsx
+│  │  ├─ ProductDetail.tsx
+│  │  ├─ Cart.tsx
+│  │  ├─ Checkout.tsx
+│  │  ├─ Wishlist.tsx
+│  │  ├─ ForgotPassword.tsx
+│  │  └─ ResetPassword.tsx
+│  ├─ services/
+│  ├─ store/
+│  ├─ App.tsx
+│  └─ main.tsx
+└─ vite.config.ts
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Prerequisites
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- Node.js 20+
+- npm 10+
+- Running backend API
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Environment Variables
+
+Create `.env` in the frontend root.
+
+```env
+VITE_API_URL=http://localhost:3000/api/v1
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
 ```
-# shoukhinabesh-frontend
 
-## Checkout
+Notes:
 
-This frontend uses a simplified order-first checkout. Customers submit the order directly, choose a payment preference, and the order is confirmed without client-side card handling.
+- `VITE_API_URL` is required.
+- `VITE_STRIPE_PUBLISHABLE_KEY` is used by checkout when Stripe is enabled.
 
-### 1) Configure environment
+## Local Development Setup
 
-Create a `.env` file from `.env.example` and set:
+1. Install dependencies:
 
-- `VITE_API_URL` to your backend API base URL
+```bash
+npm install
+```
 
-### 2) Checkout flow
+2. Start dev server:
 
-1. Go to Cart and click checkout
-2. Enter the shipping address if needed
-3. Pick a payment preference
-4. Apply a coupon if you have one
-5. Submit the order and track it from your dashboard
+```bash
+npm run dev
+```
 
-### 3) Payment handling
+Default local URL: `http://localhost:5173`
 
-The frontend no longer mounts Stripe Elements or confirms payments in the browser. If you need card processing later, it should be handled through a dedicated server-backed flow rather than directly in the checkout form.
+## Routes (High Level)
+
+Public:
+
+- `/`
+- `/shop`
+- `/product/:slug`
+- `/cart`
+- `/login`
+- `/register`
+- `/forgot-password`
+- `/reset-password`
+- `/wishlist`
+- `/privacy`
+- `/terms`
+- `/cookies`
+
+Protected:
+
+- `/checkout` (`CUSTOMER`)
+- `/dashboard` (`CUSTOMER`, `VENDOR`, `ADMIN`)
+- `/dashboard/orders` (`CUSTOMER`)
+- `/vendor` (`VENDOR`, `ADMIN`)
+- `/admin` (`ADMIN`)
+
+## Available Scripts
+
+- `npm run dev` - Start Vite development server
+- `npm run build` - Type-check and build for production
+- `npm run preview` - Preview production build locally
+- `npm run lint` - Run ESLint
+
+## Deployment
+
+- Vercel rewrite config is defined in `vercel.json` for SPA routing.
+- Ensure `VITE_API_URL` points to your deployed backend base URL.
