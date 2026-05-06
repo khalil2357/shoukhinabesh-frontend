@@ -50,12 +50,12 @@ export const authService = {
 
   async register(data: RegisterData) {
     const response = await api.post('/auth/register', data);
-    const auth = extractAuth(response.data);
-    if (auth) {
-      useAuthStore.getState().setAuth(auth.user, auth.accessToken);
-      return auth;
-    }
-    return null;
+    return response.data;
+  },
+
+  async verifyRegistration(data: { email: string; otp: string }) {
+    const response = await api.post('/auth/verify-registration', data);
+    return response.data;
   },
 
   async logout() {

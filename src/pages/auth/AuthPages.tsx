@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, ShieldCheck, Star } from 'lucide-react';
 import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/useAuthStore';
 import gsap from 'gsap';
@@ -14,9 +14,32 @@ export const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const [toastMsg, setToastMsg] = useState<{title: string, desc: string, type: 'success'|'error'} | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (title: string, desc: string, type: 'success'|'error') => {
+    setToastMsg({ title, desc, type });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    
+    setTimeout(() => {
+      gsap.killTweensOf('.premium-toast');
+      gsap.fromTo('.premium-toast',
+        { y: 50, opacity: 0, scale: 0.95 },
+        { y: 0, opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(1.5)' }
+      );
+    }, 10);
+
+    toastTimerRef.current = setTimeout(() => {
+      gsap.to('.premium-toast', {
+        y: 20, opacity: 0, scale: 0.95, duration: 0.4, ease: 'power2.in',
+        onComplete: () => setToastMsg(null)
+      });
+    }, 4000);
+  };
 
   useGSAP(() => {
     const tl = gsap.timeline();
@@ -38,20 +61,35 @@ export const Login = () => {
     setError('');
     try {
       const auth = await authService.login({ email, password });
-      const user = auth?.user ?? useAuthStore.getState().user;
-      if (user?.role === 'ADMIN') navigate('/admin');
-      else if (user?.role === 'VENDOR') navigate('/vendor');
-      else navigate('/dashboard');
+      showToast('Access Granted', 'Login successful. Redirecting to your vault...', 'success');
+      setTimeout(() => {
+        const user = auth?.user ?? useAuthStore.getState().user;
+        if (user?.role === 'ADMIN') navigate('/admin');
+        else if (user?.role === 'VENDOR') navigate('/vendor');
+        else navigate('/dashboard');
+      }, 1500);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e.response?.data?.message || 'Invalid email or password.');
-    } finally {
       setLoading(false);
     }
   };
 
   return (
     <div ref={containerRef} className="min-h-screen flex flex-col lg:flex-row bg-[#fafaf8] overflow-hidden">
+      {/* Premium Toast Notification */}
+      {toastMsg && (
+        <div className="premium-toast fixed bottom-8 right-8 z-50 bg-white shadow-[0_30px_60px_rgba(0,0,0,0.1)] border border-neutral-100 p-6 flex items-start gap-5 max-w-sm">
+          <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${toastMsg.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-500'}`}>
+            {toastMsg.type === 'success' ? <ShieldCheck className="w-4 h-4" /> : <Star className="w-4 h-4" />}
+          </div>
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-onyx">{toastMsg.title}</h4>
+            <p className="text-xs text-neutral-500 mt-2 font-light leading-relaxed">{toastMsg.desc}</p>
+          </div>
+        </div>
+      )}
+
       {/* Left: Immersive Image */}
       <div ref={imageRef} className="hidden lg:block lg:w-1/2 relative overflow-hidden h-screen sticky top-0">
         <img
@@ -146,13 +184,38 @@ export const Login = () => {
 
 export const Register = () => {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'CUSTOMER' });
+  const [step, setStep] = useState<'register' | 'verify'>('register');
+  const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const [toastMsg, setToastMsg] = useState<{title: string, desc: string, type: 'success'|'error'} | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
+
+  const showToast = (title: string, desc: string, type: 'success'|'error') => {
+    setToastMsg({ title, desc, type });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    
+    setTimeout(() => {
+      gsap.killTweensOf('.premium-toast');
+      gsap.fromTo('.premium-toast',
+        { y: 50, opacity: 0, scale: 0.95 },
+        { y: 0, opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(1.5)' }
+      );
+    }, 10);
+
+    toastTimerRef.current = setTimeout(() => {
+      gsap.to('.premium-toast', {
+        y: 20, opacity: 0, scale: 0.95, duration: 0.4, ease: 'power2.in',
+        onComplete: () => setToastMsg(null)
+      });
+    }, 4000);
+  };
 
   useGSAP(() => {
     const tl = gsap.timeline();
@@ -170,24 +233,53 @@ export const Register = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.password.length < 8) { setError('Password must be at least 8 characters.'); return; }
-    setLoading(true);
-    setError('');
-    try {
-      const auth = await authService.register(formData);
-      const user = auth?.user ?? useAuthStore.getState().user;
-      if (user?.role === 'VENDOR') navigate('/vendor');
-      else navigate('/dashboard');
-    } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || 'Registration failed. Please try again.');
-    } finally {
-      setLoading(false);
+    if (step === 'register') {
+      if (formData.password.length < 8) { setError('Password must be at least 8 characters.'); return; }
+      setLoading(true);
+      setError('');
+      try {
+        await authService.register(formData);
+        showToast('Verification Required', 'Please check your email for the OTP to complete registration.', 'success');
+        setStep('verify');
+      } catch (err: unknown) {
+        const e = err as { response?: { data?: { message?: string } } };
+        setError(e.response?.data?.message || 'Registration failed. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      setLoading(true);
+      setError('');
+      try {
+        await authService.verifyRegistration({ email: formData.email, otp });
+        showToast('Registration Successful', 'Your profile has been established. You can now sign in.', 'success');
+        setTimeout(() => {
+          navigate('/login');
+        }, 1500);
+      } catch (err: unknown) {
+        const e = err as { response?: { data?: { message?: string } } };
+        setError(e.response?.data?.message || 'Verification failed. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   return (
     <div ref={containerRef} className="min-h-screen flex flex-col lg:flex-row-reverse bg-[#fafaf8] overflow-hidden">
+      {/* Premium Toast Notification */}
+      {toastMsg && (
+        <div className="premium-toast fixed bottom-8 right-8 z-50 bg-white shadow-[0_30px_60px_rgba(0,0,0,0.1)] border border-neutral-100 p-6 flex items-start gap-5 max-w-sm">
+          <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${toastMsg.type === 'success' ? 'bg-green-50 text-green-600' : 'bg-rose-50 text-rose-500'}`}>
+            {toastMsg.type === 'success' ? <ShieldCheck className="w-4 h-4" /> : <Star className="w-4 h-4" />}
+          </div>
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-onyx">{toastMsg.title}</h4>
+            <p className="text-xs text-neutral-500 mt-2 font-light leading-relaxed">{toastMsg.desc}</p>
+          </div>
+        </div>
+      )}
+
       {/* Right: Immersive Image (reversed) */}
       <div ref={imageRef} className="hidden lg:block lg:w-1/2 relative overflow-hidden h-screen sticky top-0">
         <img
@@ -210,68 +302,94 @@ export const Register = () => {
         <div className="max-w-md w-full space-y-10">
           <div className="space-y-4">
             <p className="text-[10px] uppercase font-bold tracking-[0.6em] text-neutral-400 auth-reveal">The Membership</p>
-            <h1 className="text-5xl font-serif font-bold tracking-tighter auth-reveal">Join the Circle.</h1>
+            <h1 className="text-5xl font-serif font-bold tracking-tighter auth-reveal">
+              {step === 'register' ? 'Join the Circle.' : 'Verify Email.'}
+            </h1>
             <p className="text-sm text-neutral-500 font-light leading-relaxed auth-reveal">
-              Gain exclusive access to limited collection drops, bespoke services, and a community of connoisseurs.
+              {step === 'register' 
+                ? 'Gain exclusive access to limited collection drops, bespoke services, and a community of connoisseurs.' 
+                : `We've sent a 6-digit verification code to ${formData.email}. Please enter it below to confirm your identity.`}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="space-y-6 auth-reveal">
-              {[
-                { key: 'name', label: 'Full Name', type: 'text', placeholder: 'Enter your name' },
-                { key: 'email', label: 'Email Address', type: 'email', placeholder: 'name@example.com' },
-              ].map(({ key, label, type, placeholder }) => (
-                <div key={key} className="space-y-2 group">
-                  <label className="text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-400 group-focus-within:text-brand-onyx transition-colors">
-                    {label}
-                  </label>
-                  <input
-                    type={type}
-                    required
-                    id={`register-${key}`}
-                    className="w-full bg-transparent text-base border-b border-neutral-200 py-3 focus:outline-none focus:border-brand-onyx transition-all placeholder:text-neutral-200"
-                    placeholder={placeholder}
-                    value={formData[key as keyof typeof formData]}
-                    onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                  />
-                </div>
-              ))}
+            {step === 'register' ? (
+              <div className="space-y-6 auth-reveal">
+                {[
+                  { key: 'name', label: 'Full Name', type: 'text', placeholder: 'Enter your name' },
+                  { key: 'email', label: 'Email Address', type: 'email', placeholder: 'name@example.com' },
+                ].map(({ key, label, type, placeholder }) => (
+                  <div key={key} className="space-y-2 group">
+                    <label className="text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-400 group-focus-within:text-brand-onyx transition-colors">
+                      {label}
+                    </label>
+                    <input
+                      type={type}
+                      required
+                      id={`register-${key}`}
+                      className="w-full bg-transparent text-base border-b border-neutral-200 py-3 focus:outline-none focus:border-brand-onyx transition-all placeholder:text-neutral-200"
+                      placeholder={placeholder}
+                      value={formData[key as keyof typeof formData]}
+                      onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                    />
+                  </div>
+                ))}
 
-              <div className="space-y-2 group">
-                <label className="text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-400 group-focus-within:text-brand-onyx transition-colors">
-                  Secret Key (Password)
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    minLength={8}
-                    id="register-password"
-                    className="w-full bg-transparent text-base border-b border-neutral-200 py-3 focus:outline-none focus:border-brand-onyx transition-all placeholder:text-neutral-200"
-                    placeholder="Minimum 8 characters"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-brand-onyx transition-colors">
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                <div className="space-y-2 group">
+                  <label className="text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-400 group-focus-within:text-brand-onyx transition-colors">
+                    Secret Key (Password)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={8}
+                      id="register-password"
+                      className="w-full bg-transparent text-base border-b border-neutral-200 py-3 focus:outline-none focus:border-brand-onyx transition-all placeholder:text-neutral-200"
+                      placeholder="Minimum 8 characters"
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 top-1/2 -translate-y-1/2 text-neutral-300 hover:text-brand-onyx transition-colors">
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="space-y-6 auth-reveal">
+                <div className="space-y-2 group">
+                  <label className="text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-400 group-focus-within:text-brand-onyx transition-colors">
+                    Verification Code (OTP)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full bg-transparent text-base border-b border-neutral-200 py-3 focus:outline-none focus:border-brand-onyx transition-all placeholder:text-neutral-200 text-center tracking-[0.5em] font-medium"
+                    placeholder="------"
+                    maxLength={6}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
 
             {error && <p className="text-[10px] font-bold uppercase tracking-widest text-rose-500">{error}</p>}
 
             <div className="space-y-8 auth-reveal">
               <button type="submit" id="register-submit" disabled={loading} className="w-full premium-btn flex items-center justify-center gap-3 py-5">
-                {loading ? 'Establishing Profile...' : 'Begin Journey'}
+                {loading ? 'Processing...' : (step === 'register' ? 'Begin Journey' : 'Verify & Complete')}
                 {!loading && <ArrowRight className="w-4 h-4" />}
               </button>
-              <div className="text-center pt-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400">
-                  Already a member? <Link to="/login" className="text-brand-onyx border-b border-brand-onyx pb-0.5 ml-2 hover:opacity-60 transition-opacity">Sign In</Link>
-                </p>
-              </div>
+              
+              {step === 'register' && (
+                <div className="text-center pt-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400">
+                    Already a member? <Link to="/login" className="text-brand-onyx border-b border-brand-onyx pb-0.5 ml-2 hover:opacity-60 transition-opacity">Sign In</Link>
+                  </p>
+                </div>
+              )}
             </div>
           </form>
         </div>
