@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { signOut } from 'firebase/auth';
+import { firebaseAuth } from '../lib/firebase';
 
 interface User {
   id: string;
@@ -7,6 +9,7 @@ interface User {
   email: string;
   role: 'CUSTOMER' | 'VENDOR' | 'ADMIN';
   avatar?: string;
+  emailVerified?: boolean;
 }
 
 interface AuthState {
@@ -15,8 +18,9 @@ interface AuthState {
   isAuthenticated: boolean;
   hasHydrated: boolean;
   setAuth: (user: User, token: string) => void;
+  clearAuth: () => void;
   setHydrated: (hasHydrated: boolean) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -26,9 +30,13 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       isAuthenticated: false,
       hasHydrated: false,
-      setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
+      setAuth: (user, token) => set({ user, token, isAuthenticated: true, hasHydrated: true }),
+      clearAuth: () => set({ user: null, token: null, isAuthenticated: false, hasHydrated: true }),
       setHydrated: (hasHydrated) => set({ hasHydrated }),
-      logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      logout: async () => {
+        await signOut(firebaseAuth);
+        set({ user: null, token: null, isAuthenticated: false, hasHydrated: true });
+      },
     }),
     {
       name: 'shoukhinabesh-auth',

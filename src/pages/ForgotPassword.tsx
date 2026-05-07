@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowRight } from 'lucide-react';
-import api from '../api/axios';
+import { authService } from '../services/auth.service';
 
 export const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -13,12 +13,12 @@ export const ForgotPassword = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
     try {
-      await api.post('/auth/forgot-password', { email });
+      await authService.forgotPassword(email);
       setSent(true);
     } catch (err: unknown) {
-      const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || 'Failed to send OTP. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to send reset email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -32,25 +32,20 @@ export const ForgotPassword = () => {
             <Mail className="w-5 h-5" />
           </div>
           <h1 className="text-3xl font-serif font-bold tracking-tighter">Forgot Password</h1>
-          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400">
-            Enter your email to receive an OTP
-          </p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-400">Enter your email to receive a Firebase reset link</p>
         </div>
 
         {sent ? (
           <div className="text-center space-y-6 bg-white border border-neutral-100 p-10">
             <div className="text-3xl">✉️</div>
             <div className="space-y-2">
-              <p className="text-sm font-bold uppercase tracking-widest text-green-600">OTP Sent!</p>
+              <p className="text-sm font-bold uppercase tracking-widest text-green-600">Reset Email Sent!</p>
               <p className="text-xs text-neutral-500 leading-relaxed">
-                Check your inbox at <strong>{email}</strong>. Use the OTP to reset your password.
+                Check your inbox at <strong>{email}</strong>. Open the reset link and set a new password.
               </p>
             </div>
-            <Link
-              to="/reset-password"
-              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border-b border-brand-onyx pb-1 hover:opacity-60 transition-opacity"
-            >
-              Enter OTP <ArrowRight className="w-3 h-3" />
+            <Link to="/login" className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border-b border-brand-onyx pb-1 hover:opacity-60 transition-opacity">
+              Back to Sign In <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
         ) : (
@@ -72,11 +67,11 @@ export const ForgotPassword = () => {
 
             <div className="space-y-4">
               <button type="submit" disabled={loading} className="w-full premium-btn">
-                {loading ? 'Sending OTP...' : 'Send Reset OTP'}
+                {loading ? 'Sending Reset Link...' : 'Send Reset Link'}
               </button>
               <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest">
                 <Link to="/login" className="text-neutral-400 hover:text-brand-onyx transition-colors">Back to Sign In</Link>
-                <Link to="/reset-password" className="text-neutral-400 hover:text-brand-onyx transition-colors">Have an OTP?</Link>
+                <Link to="/register" className="text-neutral-400 hover:text-brand-onyx transition-colors">Create Account</Link>
               </div>
             </div>
           </form>

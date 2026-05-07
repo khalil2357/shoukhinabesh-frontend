@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Navbar } from './components/layout/Navbar';
 import { Home } from './pages/Home';
@@ -8,6 +8,7 @@ import { ProductDetail } from './pages/ProductDetail';
 import { Login, Register } from './pages/auth/AuthPages';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { VerifyEmail } from './pages/VerifyEmail';
 import { Checkout } from './pages/Checkout';
 import { CustomerDashboard } from './pages/account/CustomerDashboard';
 import { VendorDashboard } from './pages/vendor/VendorDashboard';
@@ -17,17 +18,48 @@ import Terms from './pages/Terms';
 import Cookies from './pages/Cookies';
 import { Wishlist } from './pages/Wishlist';
 import { useAuthStore } from './store/useAuthStore';
+import { firebaseAuth } from './lib/firebase';
+import { onIdTokenChanged } from 'firebase/auth';
 import './App.css';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, roles }: { children: ReactNode; roles?: string[] }) => {
-  const { isAuthenticated, user } = useAuthStore();
+  const { hasHydrated, isAuthenticated, user } = useAuthStore();
+  if (!hasHydrated) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/" replace />;
   return children;
 };
 
 function App() {
+  useEffect(() => {
+    const unsubscribe = onIdTokenChanged(firebaseAuth, async (firebaseUser) => {
+      if (!firebaseUser) {
+        // Keep local state in sync without triggering another signOut call.
+        useAuthStore.getState().clearAuth();
+        return;
+      }
+
+      const tokenResult = await firebaseUser.getIdTokenResult();
+      const role = (tokenResult.claims.role as 'CUSTOMER' | 'VENDOR' | 'ADMIN' | undefined) || 'CUSTOMER';
+      const token = await firebaseUser.getIdToken();
+
+      useAuthStore.getState().setAuth(
+        {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email || 'User',
+          email: firebaseUser.email || '',
+          role,
+          avatar: firebaseUser.photoURL || undefined,
+          emailVerified: firebaseUser.emailVerified,
+        },
+        token,
+      );
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <Router>
       <div className="min-h-screen flex flex-col">
@@ -43,6 +75,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/wishlist" element={<Wishlist />} />
 
             {/* Checkout — requires auth */}
