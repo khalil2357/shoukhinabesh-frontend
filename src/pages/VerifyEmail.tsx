@@ -18,14 +18,13 @@ export const VerifyEmail = () => {
   useEffect(() => {
     const completeVerification = async () => {
       try {
+        if (mode === 'resetPassword' || mode === 'reset-password') {
+          navigate(`/reset-password?${searchParams.toString()}`, { replace: true });
+          return;
+        }
+
         // If there's a code parameter and mode is verifyEmail, use it to apply the action code
-        if (code && mode === 'verifyEmail') {
-          await authService.verifyEmail(code);
-          setSuccess(true);
-          // Redirect to dashboard if authenticated, otherwise to login
-          setTimeout(() => navigate(isAuthenticated ? '/dashboard' : '/login'), 2500);
-        } else if (code) {
-          // Try with just the code in case mode isn't set
+        if (code && (mode === 'verifyEmail' || !mode)) {
           await authService.verifyEmail(code);
           setSuccess(true);
           // Redirect to dashboard if authenticated, otherwise to login
@@ -43,7 +42,7 @@ export const VerifyEmail = () => {
     };
 
     completeVerification();
-  }, [navigate, code, mode, loading, isAuthenticated]);
+  }, [navigate, code, mode, loading, isAuthenticated, searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center px-6 pt-16 bg-[#fafaf8]">

@@ -103,34 +103,76 @@ export const authService = {
   async register(data: RegisterData) {
     try {
       const normalizedEmail = normalizeEmail(data.email);
+
+      // 1. Check if email is available in MongoDB
+      const checkRes = await fetch(`${apiUrl}/auth/firebase/check-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+
+      if (!checkRes.ok) {
+        if (checkRes.status === 409) {
+          throw new Error('Email already use');
+        }
+        throw new Error('Unable to verify email availability.');
+      }
+
+      // 2. Create Firebase user (Required for Firebase to send verification email)
       const credential = await createUserWithEmailAndPassword(firebaseAuth, normalizedEmail, data.password);
       const firebaseUser = credential.user;
 
       await updateProfile(firebaseUser, { displayName: data.name });
 
-      const syncRes = await fetch(`${apiUrl}/auth/firebase/sync-user`, {
+      // 3. Send Firebase Verification Email
+      // NOTE: Firebase will store this user as "unverified" until they click the link.
+      // We do NOT call sync-user yet, so MongoDB remains empty.
+      await sendEmailVerification(firebaseUser, getActionSettings('/verify-email'));
+      
+      // 4. Sign out immediately - enforce "no session until verified"
+      await signOut(firebaseAuth);
+      useAuthStore.getState().clearAuth();
+
+      return { message: 'Verification email sent. Please check your inbox.' };
+    } catch (error: unknown) {
+      if (error instanceof Error && (error.message === 'Email already use')) {
+        throw error;
+      }
+      throw new Error(toAuthErrorMessage(error, 'Registration failed. Please try again.'));
+    }
+  },
+
+  async verifyEmail(oobCode: string) {
+    try {
+      // 1. Apply Firebase action code
+      await applyActionCode(firebaseAuth, oobCode);
+      
+      // After applying, the email is verified in Firebase Auth.
+      // The MongoDB record will be created automatically when the user first logs in 
+      // via the JwtAuthGuard auto-sync mechanism.
+      
+      return { message: 'Email verified successfully. You can now login.' };
+    } catch (error: unknown) {
+      throw new Error(toAuthErrorMessage(error, 'Verification link is invalid or expired.'));
+    }
+  },
+
+  async syncAfterVerification(firebaseUser: FirebaseUser) {
+    // This is a helper to finalize MongoDB record after verification
+    try {
+      const res = await fetch(`${apiUrl}/auth/firebase/sync-user`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           uid: firebaseUser.uid,
           email: firebaseUser.email,
-          name: data.name,
+          name: firebaseUser.displayName,
           emailVerified: firebaseUser.emailVerified,
         }),
       });
-
-      if (!syncRes.ok) {
-        // Keep Firebase and MongoDB consistent: rollback Firebase user if Mongo sync fails.
-        await firebaseUser.delete();
-        throw new Error('Unable to create account right now. Please try again.');
-      }
-
-      await sendEmailVerification(firebaseUser, getActionSettings('/verify-email'));
-      await signOut(firebaseAuth);
-      useAuthStore.getState().clearAuth();
-      return { message: 'Verification email sent. Please check your inbox.' };
-    } catch (error: unknown) {
-      throw new Error(toAuthErrorMessage(error, 'Registration failed. Please try again.'));
+      return await res.json();
+    } catch (error) {
+      console.error('Failed to sync after verification:', error);
     }
   },
 
