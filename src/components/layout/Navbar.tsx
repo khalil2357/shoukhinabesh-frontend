@@ -34,6 +34,7 @@ export const Navbar = () => {
   const wishBtnRef = useRef<HTMLButtonElement>(null);
   const cartCountRef = useRef<HTMLSpanElement>(null);
   const wishCountRef = useRef<HTMLSpanElement>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
   const [navMessage, setNavMessage] = useState<string | null>(null);
   const navMessageTimeout = useRef<any>(null);
 
@@ -156,37 +157,47 @@ export const Navbar = () => {
       // set message state
       setNavMessage(msg);
 
-      // animate navbar center expand briefly
-      if (centerRef.current) {
-        gsap.killTweensOf(centerRef.current);
-        gsap.to(centerRef.current, { scale: 1.02, duration: 0.12, ease: 'power2.out' });
+      // animate dynamic island
+      if (messageRef.current) {
+        gsap.killTweensOf(messageRef.current);
+        gsap.fromTo(messageRef.current, 
+          { y: -30, scale: 0.8, opacity: 0 },
+          { y: 0, scale: 1, opacity: 1, duration: 0.6, ease: 'elastic.out(1, 0.7)' }
+        );
       }
 
       // clear any existing timers
       if (navMessageTimeout.current) clearTimeout(navMessageTimeout.current);
       navMessageTimeout.current = setTimeout(() => {
         // hide message
-        setNavMessage(null);
-        if (centerRef.current) gsap.to(centerRef.current, { scale: 1, duration: 0.18, ease: 'power2.inOut' });
-      }, 2200);
-      // Glow icon for a moment
+        if (messageRef.current) {
+          gsap.to(messageRef.current, { 
+            y: -30, scale: 0.8, opacity: 0, duration: 0.4, ease: 'power3.in',
+            onComplete: () => setNavMessage(null)
+          });
+        } else {
+          setNavMessage(null);
+        }
+      }, 3000);
+
+      // Glow icon for a moment with modern western effects
       try {
         if (type === 'vault' && cartBtnRef.current) {
           const el = cartBtnRef.current;
           const ct = cartCountRef.current;
           const tl = gsap.timeline();
-          tl.to(el, { scale: 1.08, boxShadow: '0 10px 30px rgba(197,163,93,0.28)', duration: 0.16, ease: 'power2.out' })
-            .to(el, { scale: 1, boxShadow: '0 0px 0px rgba(0,0,0,0)', duration: 0.5, ease: 'power2.in' });
-          if (ct) gsap.fromTo(ct, { scale: 1 }, { scale: 1.08, duration: 0.16, yoyo: true, repeat: 1, ease: 'power2.out' });
+          tl.to(el, { scale: 1.15, filter: 'drop-shadow(0px 0px 8px rgba(197,163,93,0.8))', duration: 0.2, ease: 'back.out(2)' })
+            .to(el, { scale: 1, filter: 'drop-shadow(0px 0px 0px rgba(0,0,0,0))', duration: 0.4, ease: 'power2.out' });
+          if (ct) gsap.fromTo(ct, { scale: 1 }, { scale: 1.3, backgroundColor: '#fff', color: '#000', boxShadow: '0 0 15px rgba(255,255,255,0.8)', duration: 0.2, yoyo: true, repeat: 1, ease: 'back.out(2)' });
         }
 
         if ((type === 'wishlist' || type === 'wishlist-remove') && wishBtnRef.current) {
           const el = wishBtnRef.current;
           const ct = wishCountRef.current;
           const tl = gsap.timeline();
-          tl.to(el, { scale: 1.08, boxShadow: '0 10px 30px rgba(197,163,93,0.28)', duration: 0.16, ease: 'power2.out' })
-            .to(el, { scale: 1, boxShadow: '0 0px 0px rgba(0,0,0,0)', duration: 0.5, ease: 'power2.in' });
-          if (ct) gsap.fromTo(ct, { scale: 1 }, { scale: 1.08, duration: 0.16, yoyo: true, repeat: 1, ease: 'power2.out' });
+          tl.to(el, { scale: 1.15, filter: 'drop-shadow(0px 0px 8px rgba(197,163,93,0.8))', duration: 0.2, ease: 'back.out(2)' })
+            .to(el, { scale: 1, filter: 'drop-shadow(0px 0px 0px rgba(0,0,0,0))', duration: 0.4, ease: 'power2.out' });
+          if (ct) gsap.fromTo(ct, { scale: 1 }, { scale: 1.3, backgroundColor: '#fff', color: '#000', boxShadow: '0 0 15px rgba(255,255,255,0.8)', duration: 0.2, yoyo: true, repeat: 1, ease: 'back.out(2)' });
         }
       } catch (err) {
         // ignore animation errors
@@ -285,20 +296,12 @@ export const Navbar = () => {
 
           {/* Logo (Center) - Refined Ribbon Style */}
           <div ref={logoRef} className="flex-none lg:absolute lg:left-1/2 lg:-translate-x-1/2">
-              {navMessage ? (
-                <div className="hidden lg:flex items-center justify-center w-full">
-                  <div className="px-6 py-3 rounded-full bg-brand-onyx text-white font-black text-sm tracking-widest shadow-[0_12px_40px_rgba(197,163,93,0.12)]" style={{backdropFilter: 'blur(6px)'}}>
-                    {navMessage}
-                  </div>
-                </div>
-              ) : (
-                <Link
-                  to="/"
-                  className={`text-sm md:text-base font-serif font-black tracking-[0.4em] uppercase transition-all duration-700 ${logoColorClass} ${scrolled ? 'scale-90' : 'scale-100'}`}
-                >
-                  SHOUKHINABESH
-                </Link>
-              )}
+            <Link
+              to="/"
+              className={`text-sm md:text-base font-serif font-black tracking-[0.4em] uppercase transition-all duration-700 ${logoColorClass} ${scrolled ? 'scale-90' : 'scale-100'}`}
+            >
+              SHOUKHINABESH
+            </Link>
           </div>
 
           {/* Right actions (Desktop only) */}
@@ -317,9 +320,9 @@ export const Navbar = () => {
                 onClick={() => setWishlistOpen(true)}
                 className={`nav-icon p-2 ${iconColorClass} hover:text-brand-gold transition-all relative hover:bg-neutral-500/5 rounded-full`}
               >
-                <Heart className={`w-[18px] h-[18px] ${wishlistItems.length > 0 ? 'fill-brand-gold text-brand-gold' : ''}`} />
+                <Heart className={`w-[18px] h-[18px] transition-all duration-300 ${wishlistItems.length > 0 ? 'fill-brand-gold text-brand-gold drop-shadow-[0_0_8px_rgba(197,163,93,0.6)]' : ''}`} />
                 {wishlistItems.length > 0 && (
-                  <span ref={wishCountRef} className="absolute top-1 right-1 w-3 h-3 bg-brand-gold text-brand-onyx text-[7px] font-black rounded-full flex items-center justify-center">
+                  <span ref={wishCountRef} className="absolute -top-1 -right-1 w-[15px] h-[15px] bg-brand-gold text-brand-onyx text-[8px] font-black rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(197,163,93,0.6)] border border-white/20">
                     {wishlistItems.length}
                   </span>
                 )}
@@ -330,9 +333,9 @@ export const Navbar = () => {
                 onClick={() => setCartOpen(true)}
                 className={`nav-icon p-2 ${iconColorClass} hover:text-brand-gold transition-all relative hover:bg-neutral-500/5 rounded-full`}
               >
-                <ShoppingBag className="w-[18px] h-[18px]" />
+                <ShoppingBag className={`w-[18px] h-[18px] transition-all duration-300 ${itemCount > 0 ? 'text-brand-gold drop-shadow-[0_0_8px_rgba(197,163,93,0.6)]' : ''}`} />
                 {itemCount > 0 && (
-                  <span ref={cartCountRef} className="absolute top-1 right-1 w-3 h-3 bg-brand-gold text-brand-onyx text-[7px] font-black rounded-full flex items-center justify-center">
+                  <span ref={cartCountRef} className="absolute -top-1 -right-1 w-[15px] h-[15px] bg-brand-gold text-brand-onyx text-[8px] font-black rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(197,163,93,0.6)] border border-white/20">
                     {itemCount > 99 ? '99' : itemCount}
                   </span>
                 )}
@@ -400,8 +403,28 @@ export const Navbar = () => {
         </div>
       </nav>
 
-      {/* Dynamic island toast (positioned absolutely, controlled via GSAP) */}
-      {/* toast removed — using nav message under logo instead */}
+      {/* Apple Dynamic Island Toast */}
+      <div 
+        className="fixed top-[100px] left-0 right-0 z-[150] flex justify-center pointer-events-none"
+      >
+        <div 
+          ref={messageRef}
+          style={{ opacity: 0, transform: 'translateY(-30px)' }}
+        >
+          {navMessage && (
+            <div className="px-6 py-3 rounded-full bg-brand-onyx/95 backdrop-blur-2xl border border-white/10 text-white flex items-center gap-3 shadow-[0_20px_40px_rgba(0,0,0,0.5),0_0_30px_rgba(197,163,93,0.15)] overflow-hidden">
+              <div className="relative flex items-center justify-center w-5 h-5 bg-white/10 rounded-full">
+                {navMessage.toLowerCase().includes('vault') || navMessage.toLowerCase().includes('cart') ? (
+                  <ShoppingBag className="w-3 h-3 text-brand-gold" />
+                ) : (
+                  <Heart className="w-3 h-3 text-brand-gold" />
+                )}
+              </div>
+              <span className="font-black text-[10px] uppercase tracking-widest mt-0.5">{navMessage}</span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* iOS-Style Floating Search Bar */}
       <div 
