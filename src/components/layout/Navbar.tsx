@@ -10,11 +10,12 @@ import { useGSAP } from '@gsap/react';
 export const Navbar = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
   const { itemCount, fetchCart, reset } = useCartStore();
-  const { items: wishlistItems, fetchWishlist } = useWishlistStore();
   const navigate = useNavigate();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -23,9 +24,57 @@ export const Navbar = () => {
   const logoRef = useRef<HTMLDivElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
   const searchOverlayRef = useRef<HTMLDivElement>(null);
+  const cartOverlayRef = useRef<HTMLDivElement>(null);
+  const wishlistOverlayRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
+
+  const { cart, updateItem, removeItem: removeCartItem, addItem } = useCartStore();
+  const { items: wishlistItems, toggleWishlist, fetchWishlist } = useWishlistStore();
+  
+  const items = cart?.items || [];
+  const totalAmount = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+
+  useGSAP(() => {
+    if (cartOpen) {
+      const tl = gsap.timeline();
+      tl.to(cartOverlayRef.current, { display: 'flex', opacity: 1, duration: 0.1 })
+        .fromTo('.cart-drawer', 
+          { x: '100%' }, 
+          { x: '0%', duration: 0.8, ease: 'expo.out' }
+        )
+        .fromTo('.cart-item', 
+          { x: 30, opacity: 0 }, 
+          { x: 0, opacity: 1, duration: 0.4, stagger: 0.1, ease: 'power3.out' },
+          '-=0.4'
+        );
+    } else {
+      gsap.to('.cart-drawer', { x: '100%', duration: 0.6, ease: 'expo.in', onComplete: () => {
+        if (cartOverlayRef.current) cartOverlayRef.current.style.display = 'none';
+      }});
+    }
+  }, [cartOpen]);
+
+  useGSAP(() => {
+    if (wishlistOpen) {
+      const tl = gsap.timeline();
+      tl.to(wishlistOverlayRef.current, { display: 'flex', opacity: 1, duration: 0.1 })
+        .fromTo('.wishlist-drawer', 
+          { x: '100%' }, 
+          { x: '0%', duration: 0.8, ease: 'expo.out' }
+        )
+        .fromTo('.wishlist-item', 
+          { x: 30, opacity: 0 }, 
+          { x: 0, opacity: 1, duration: 0.4, stagger: 0.1, ease: 'power3.out' },
+          '-=0.4'
+        );
+    } else {
+      gsap.to('.wishlist-drawer', { x: '100%', duration: 0.6, ease: 'expo.in', onComplete: () => {
+        if (wishlistOverlayRef.current) wishlistOverlayRef.current.style.display = 'none';
+      }});
+    }
+  }, [wishlistOpen]);
 
   useGSAP(() => {
     // Initial entrance
@@ -192,20 +241,20 @@ export const Navbar = () => {
                 <Search className="w-[18px] h-[18px]" />
               </button>
 
-              <Link
-                to="/wishlist"
+              <button
+                onClick={() => setWishlistOpen(true)}
                 className={`nav-icon p-2 ${iconColorClass} hover:text-brand-gold transition-all relative hover:bg-neutral-500/5 rounded-full`}
               >
-                <Heart className="w-[18px] h-[18px]" />
+                <Heart className={`w-[18px] h-[18px] ${wishlistItems.length > 0 ? 'fill-brand-gold text-brand-gold' : ''}`} />
                 {wishlistItems.length > 0 && (
                   <span className="absolute top-1 right-1 w-3 h-3 bg-brand-gold text-brand-onyx text-[7px] font-black rounded-full flex items-center justify-center">
                     {wishlistItems.length}
                   </span>
                 )}
-              </Link>
+              </button>
 
-              <Link
-                to="/cart"
+              <button
+                onClick={() => setCartOpen(true)}
                 className={`nav-icon p-2 ${iconColorClass} hover:text-brand-gold transition-all relative hover:bg-neutral-500/5 rounded-full`}
               >
                 <ShoppingBag className="w-[18px] h-[18px]" />
@@ -214,7 +263,7 @@ export const Navbar = () => {
                     {itemCount > 99 ? '99' : itemCount}
                   </span>
                 )}
-              </Link>
+              </button>
             </div>
 
             {/* User Profile (Desktop only) */}
@@ -359,13 +408,12 @@ export const Navbar = () => {
                   <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">Search</span>
                 </button>
 
-                <Link
-                  to="/wishlist"
-                  onClick={() => setMobileOpen(false)}
+                <button
+                  onClick={() => { setMobileOpen(false); setWishlistOpen(true); }}
                   className="flex flex-col items-center gap-2 group relative"
                 >
                   <div className="w-12 h-12 rounded-full border border-neutral-100 flex items-center justify-center group-hover:bg-brand-onyx group-hover:text-white transition-all">
-                    <Heart className="w-5 h-5" />
+                    <Heart className={`w-5 h-5 ${wishlistItems.length > 0 ? 'fill-brand-gold text-brand-gold border-none' : ''}`} />
                   </div>
                   <span className="text-[8px] font-black uppercase tracking-widest text-neutral-400">Wishlist</span>
                   {wishlistItems.length > 0 && (
@@ -373,11 +421,10 @@ export const Navbar = () => {
                       {wishlistItems.length}
                     </span>
                   )}
-                </Link>
+                </button>
 
-                <Link
-                  to="/cart"
-                  onClick={() => setMobileOpen(false)}
+                <button
+                  onClick={() => { setMobileOpen(false); setCartOpen(true); }}
                   className="flex flex-col items-center gap-2 group relative"
                 >
                   <div className="w-12 h-12 rounded-full border border-neutral-100 flex items-center justify-center group-hover:bg-brand-onyx group-hover:text-white transition-all">
@@ -389,7 +436,7 @@ export const Navbar = () => {
                       {itemCount}
                     </span>
                   )}
-                </Link>
+                </button>
               </div>
 
               {/* Navigation Links */}
@@ -464,6 +511,194 @@ export const Navbar = () => {
             <div className="p-8 bg-neutral-50 text-center">
                <p className="text-[8px] font-black uppercase tracking-[0.5em] text-neutral-300">© 2026 Shoukhinabesh Luxury</p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* GSAP Cart Drawer */}
+      <div 
+        ref={cartOverlayRef}
+        className="fixed inset-0 z-[200] hidden"
+      >
+        <div 
+          className="absolute inset-0 bg-brand-onyx/40 backdrop-blur-sm"
+          onClick={() => setCartOpen(false)}
+        />
+        <div className="cart-drawer absolute top-0 right-0 h-full w-full max-w-md bg-white flex flex-col shadow-2xl">
+          <div className={`px-8 h-24 flex items-center justify-between border-b ${scrolled ? 'bg-brand-onyx text-white border-white/5' : 'bg-brand-cream text-brand-onyx border-neutral-100'}`}>
+            <div className="flex items-center gap-3">
+              <ShoppingBag className="w-5 h-5" />
+              <span className="text-sm font-black uppercase tracking-[0.3em]">Your Cart ({itemCount})</span>
+            </div>
+            <button
+              onClick={() => setCartOpen(false)}
+              className="p-3 hover:rotate-90 transition-all duration-500"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-8 py-10 space-y-8">
+            {items.length > 0 ? (
+              items.map((item) => (
+                <div key={item.id} className="cart-item flex gap-5 group">
+                  <div className="w-24 h-24 bg-neutral-50 rounded-xl overflow-hidden flex-none relative">
+                    <img 
+                      src={item.product.images[0]} 
+                      alt={item.product.name} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col justify-between py-1">
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-onyx line-clamp-1">{item.product.name}</h4>
+                      <p className="text-[11px] font-serif text-neutral-400 mt-1">৳ {item.product.price.toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center border border-neutral-100 rounded-full px-2 py-1 gap-4">
+                        <button 
+                          onClick={() => updateItem(item.id, item.quantity - 1)}
+                          className="text-neutral-400 hover:text-brand-onyx px-1"
+                        >-</button>
+                        <span className="text-[10px] font-black">{item.quantity}</span>
+                        <button 
+                          onClick={() => updateItem(item.id, item.quantity + 1)}
+                          className="text-neutral-400 hover:text-brand-onyx px-1"
+                        >+</button>
+                      </div>
+                      <button 
+                        onClick={() => removeCartItem(item.id)}
+                        className="text-[9px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 underline underline-offset-4"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
+                <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center">
+                  <ShoppingBag className="w-8 h-8 text-neutral-200" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Your cart is empty</p>
+                  <button 
+                    onClick={() => { setCartOpen(false); navigate('/shop'); }}
+                    className="mt-4 text-brand-gold font-serif italic text-lg hover:underline"
+                  >
+                    Start Shopping
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-8 border-t border-neutral-100 space-y-6 bg-neutral-50/50">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-400">Subtotal</span>
+              <span className="text-xl font-serif font-black text-brand-onyx">৳ {totalAmount.toLocaleString()}</span>
+            </div>
+            <p className="text-[8px] text-neutral-400 text-center uppercase tracking-widest">
+              Shipping & taxes calculated at checkout
+            </p>
+            <button
+              disabled={items.length === 0}
+              onClick={() => { setCartOpen(false); navigate('/checkout'); }}
+              className="w-full bg-brand-onyx text-white py-6 rounded-full text-[10px] font-black uppercase tracking-[0.4em] hover:bg-brand-onyx/90 transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed group flex items-center justify-center gap-3"
+            >
+              Secure Checkout <Package className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* GSAP Wishlist Drawer */}
+      <div 
+        ref={wishlistOverlayRef}
+        className="fixed inset-0 z-[200] hidden"
+      >
+        <div 
+          className="absolute inset-0 bg-brand-onyx/40 backdrop-blur-sm"
+          onClick={() => setWishlistOpen(false)}
+        />
+        <div className="wishlist-drawer absolute top-0 right-0 h-full w-full max-w-md bg-white flex flex-col shadow-2xl">
+          <div className={`px-8 h-24 flex items-center justify-between border-b ${scrolled ? 'bg-brand-onyx text-white border-white/5' : 'bg-brand-cream text-brand-onyx border-neutral-100'}`}>
+            <div className="flex items-center gap-3">
+              <Heart className="w-5 h-5 fill-brand-gold text-brand-gold" />
+              <span className="text-sm font-black uppercase tracking-[0.3em]">Wishlist ({wishlistItems.length})</span>
+            </div>
+            <button
+              onClick={() => setWishlistOpen(false)}
+              className="p-3 hover:rotate-90 transition-all duration-500"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-8 py-10 space-y-8">
+            {wishlistItems.length > 0 ? (
+              wishlistItems.map((item: any) => (
+                <div key={item.id} className="wishlist-item flex gap-5 group">
+                  <div className="w-24 h-24 bg-neutral-50 rounded-xl overflow-hidden flex-none relative">
+                    <img 
+                      src={item.product.images[0]} 
+                      alt={item.product.name} 
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col justify-between py-1">
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-brand-onyx line-clamp-1">{item.product.name}</h4>
+                      <p className="text-[11px] font-serif text-neutral-400 mt-1">৳ {item.product.price.toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center justify-between mt-4">
+                      <button 
+                        onClick={async () => {
+                          await addItem(item.product.id, 1);
+                          await toggleWishlist(item.product.id);
+                          setWishlistOpen(false);
+                          setCartOpen(true);
+                        }}
+                        className="text-[9px] font-black uppercase tracking-widest bg-brand-onyx text-white px-4 py-2 rounded-full hover:bg-brand-gold hover:text-brand-onyx transition-all flex items-center gap-2"
+                      >
+                        <ShoppingBag className="w-3 h-3" /> Move to Cart
+                      </button>
+                      <button 
+                        onClick={() => toggleWishlist(item.product.id)}
+                        className="text-[9px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 underline underline-offset-4"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
+                <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center">
+                  <Heart className="w-8 h-8 text-neutral-200" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-neutral-400">Your wishlist is empty</p>
+                  <button 
+                    onClick={() => { setWishlistOpen(false); navigate('/shop'); }}
+                    className="mt-4 text-brand-gold font-serif italic text-lg hover:underline"
+                  >
+                    Discover Products
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-8 border-t border-neutral-100 bg-neutral-50/50">
+            <button
+              onClick={() => { setWishlistOpen(false); navigate('/shop'); }}
+              className="w-full border border-brand-onyx text-brand-onyx py-6 rounded-full text-[10px] font-black uppercase tracking-[0.4em] hover:bg-brand-onyx hover:text-white transition-all group flex items-center justify-center gap-3"
+            >
+              Continue Shopping <ChevronDown className="w-4 h-4 -rotate-90 group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
         </div>
       </div>
