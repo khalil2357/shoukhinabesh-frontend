@@ -125,9 +125,13 @@ export const authService = {
       await updateProfile(firebaseUser, { displayName: data.name });
 
       // 3. Send Firebase Verification Email
-      // NOTE: Firebase will store this user as "unverified" until they click the link.
-      // We do NOT call sync-user yet, so MongoDB remains empty.
-      await sendEmailVerification(firebaseUser, getActionSettings('/verify-email'));
+      try {
+        await sendEmailVerification(firebaseUser, getActionSettings('/verify-email'));
+      } catch (err) {
+        // ATOMIC CLEANUP: If email fails, delete the user so we don't have orphans
+        await firebaseUser.delete();
+        throw err;
+      }
       
       // 4. Sign out immediately - enforce "no session until verified"
       await signOut(firebaseAuth);
@@ -135,6 +139,7 @@ export const authService = {
 
       return { message: 'Verification email sent. Please check your inbox.' };
     } catch (error: unknown) {
+      console.error('Firebase Registration Error:', error);
       if (error instanceof Error && (error.message === 'Email already use')) {
         throw error;
       }
@@ -202,6 +207,7 @@ export const authService = {
       await sendPasswordResetEmail(firebaseAuth, normalizedEmail, getActionSettings('/reset-password'));
       return { message: 'Password reset email sent.' };
     } catch (error: unknown) {
+      console.error('Firebase Forgot Password Error:', error);
       if (error instanceof Error && error.message === 'No account found with this email.') {
         throw error;
       }
@@ -215,14 +221,11 @@ export const authService = {
       await confirmPasswordReset(firebaseAuth, oobCode, newPassword);
       return { message: 'Password updated successfully.' };
     } catch (error: unknown) {
+      console.error('Firebase Reset Password Error:', error);
       throw new Error(toAuthErrorMessage(error, 'Reset link is invalid or expired.'));
     }
   },
 
-  async verifyEmail(oobCode: string) {
-    await applyActionCode(firebaseAuth, oobCode);
-    return { message: 'Email verified successfully.' };
-  },
 
   async logout() {
     await signOut(firebaseAuth);
