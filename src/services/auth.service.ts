@@ -219,10 +219,6 @@ export const authService = {
     }
   },
 
-  async verifyEmail(oobCode: string) {
-    await applyActionCode(firebaseAuth, oobCode);
-    return { message: 'Email verified successfully.' };
-  },
 
   async logout() {
     await signOut(firebaseAuth);
