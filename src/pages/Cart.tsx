@@ -181,7 +181,7 @@ export const Cart = () => {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-4xl text-neutral-100 italic font-serif">S</div>
                     )}
-                    {updatingId === item.id && (
+                    {(updatingId === item.id || removingId === item.id) && (
                       <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
                         <div className="w-6 h-6 border-2 border-brand-onyx border-t-transparent rounded-full animate-spin" />
                       </div>

@@ -22,11 +22,12 @@ const SORT_OPTIONS = [
 ];
 
 const SkeletonCard = () => (
-  <div className="space-y-4">
-    <div className="aspect-[3/4] skeleton rounded-sm" />
-    <div className="space-y-2">
-      <div className="h-3 skeleton w-2/3 mx-auto" />
-      <div className="h-4 skeleton w-1/2 mx-auto" />
+  <div className="space-y-4 widget">
+    <div className="aspect-[4/5] skeleton rounded-[2rem] shadow-sm" />
+    <div className="space-y-3 px-2">
+      <div className="h-2 skeleton w-1/3 mx-auto rounded-full" />
+      <div className="h-3 skeleton w-3/4 mx-auto rounded-full" />
+      <div className="h-4 skeleton w-1/2 mx-auto rounded-full" />
     </div>
   </div>
 );
@@ -58,24 +59,24 @@ export const Shop = () => {
   const LIMIT = 12;
 
   useGSAP(() => {
-    // Initial entrance
+    // Initial entrance - refined power4.out
     const tl = gsap.timeline();
-    tl.fromTo('.shop-header', 
-      { y: 30, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }
+    tl.fromTo('.shop-header',
+      { y: 50, opacity: 0 },
+      { y: 0, opacity: 1, duration: 1.2, ease: 'power4.out' }
     )
-    .fromTo('.shop-sidebar', 
-      { x: -30, opacity: 0 },
-      { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out' },
-      '-=0.6'
-    );
+      .fromTo('.shop-sidebar .widget',
+        { y: 30, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.8, stagger: 0.1, ease: 'power3.out' },
+        '-=0.8'
+      );
   }, { scope: containerRef });
 
   useGSAP(() => {
     if (!loading && products.length > 0) {
-      gsap.fromTo('.product-card', 
-        { y: 30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.6, stagger: 0.05, ease: 'power2.out' }
+      gsap.fromTo('.product-card',
+        { y: 40, scale: 0.95, opacity: 0 },
+        { y: 0, scale: 1, opacity: 1, duration: 0.8, stagger: 0.08, ease: 'back.out(1.2)' }
       );
     }
   }, [loading, products]);
@@ -89,9 +90,9 @@ export const Shop = () => {
       else if (Array.isArray(data?.data?.categories)) list = data.data.categories;
       else if (Array.isArray(data?.categories)) list = data.categories;
       else if (Array.isArray(data?.items)) list = data.items;
-      
+
       setCategories(list);
-    }).catch(() => {});
+    }).catch(() => { });
   }, []);
 
   const fetchProducts = useCallback(async () => {
@@ -106,7 +107,7 @@ export const Shop = () => {
 
       const res = await productsService.getProducts(params);
       const data = res.data;
-      
+
       let list: any[] = [];
       if (Array.isArray(data)) list = data;
       else if (Array.isArray(data?.data)) list = data.data;
@@ -199,159 +200,192 @@ export const Shop = () => {
   return (
     <div ref={containerRef} className="pt-32 pb-32 min-h-screen bg-[#fafaf8]">
       {/* Header */}
-      <div className="px-6 md:px-12 lg:px-24 mb-20 shop-header">
+      <div className="px-6 md:px-12 lg:px-24 mb-16 shop-header">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10">
-            <div className="space-y-4">
-              <span className="text-[10px] font-bold uppercase tracking-[0.6em] text-brand-gold block">Curated Collection</span>
-              <h1 className="text-6xl md:text-8xl font-serif font-bold tracking-tighter leading-[0.85]">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-10 bg-white/60 backdrop-blur-3xl p-10 md:p-14 rounded-[3rem] shadow-[0_20px_60px_rgba(0,0,0,0.02)] border border-white">
+            <div className="space-y-6">
+              <span className="text-[10px] font-black uppercase tracking-[0.6em] text-brand-gold block">Curated Collection</span>
+              <h1 className="text-6xl md:text-8xl font-serif font-black tracking-tighter leading-[0.85] text-brand-onyx">
                 Fine <br />
-                <span className="italic font-normal">Jewellery.</span>
+                <span className="italic font-medium text-brand-onyx/80">Jewellery.</span>
               </h1>
             </div>
             <div className="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
               {hasActiveFilters && (
-                <button onClick={clearFilters} className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-rose-500 hover:text-rose-600 transition-colors">
+                <button onClick={clearFilters} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 hover:text-rose-600 transition-colors bg-rose-500/10 px-4 py-2.5 rounded-full">
                   <X className="w-3 h-3" /> Reset
                 </button>
               )}
-              <div className="relative group w-full md:w-64">
+              <div className="relative group w-full md:w-64 bg-white rounded-full px-6 py-3.5 shadow-sm border border-neutral-100 hover:border-neutral-200 transition-colors">
                 <select
                   value={sortValue}
                   onChange={(e) => { setSortValue(e.target.value); setPage(1); }}
-                  className="w-full appearance-none border-b border-neutral-200 bg-transparent py-2 text-[11px] font-bold uppercase tracking-widest focus:outline-none focus:border-brand-onyx transition-colors cursor-pointer"
+                  className="w-full appearance-none bg-transparent text-[10px] font-black uppercase tracking-widest text-brand-onyx focus:outline-none cursor-pointer"
                 >
                   {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-neutral-400 group-hover:text-brand-onyx transition-colors">
-                  <ChevronRight className="w-3 h-3 rotate-90" />
+                <div className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-brand-gold group-hover:text-brand-onyx transition-colors">
+                  <ChevronRight className="w-4 h-4 rotate-90" />
                 </div>
               </div>
               <button
                 onClick={() => setFilterOpen(!filterOpen)}
-                className="lg:hidden flex items-center justify-center gap-2 border border-brand-onyx px-8 py-3 w-full text-[10px] font-bold uppercase tracking-widest hover:bg-brand-onyx hover:text-brand-cream transition-all"
+                className="lg:hidden flex items-center justify-center gap-2 bg-brand-onyx text-white px-8 py-3.5 w-full rounded-full text-[10px] font-black uppercase tracking-widest shadow-[0_10px_20px_rgba(0,0,0,0.1)] hover:bg-black transition-all"
               >
-                <SlidersHorizontal className="w-3 h-3" /> Filters
+                <SlidersHorizontal className="w-4 h-4" /> Filters
               </button>
             </div>
           </div>
-          <div className="flex justify-between items-center mt-8 border-t border-neutral-100 pt-6">
-            <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest">{total} pieces in vault</p>
-            {cartMsg && <p className="text-[10px] font-bold uppercase tracking-widest text-brand-gold animate-fadeIn">{cartMsg}</p>}
+          <div className="flex justify-between items-center mt-6 px-4">
+            <p className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">{total} pieces in vault</p>
+            {cartMsg && <p className="text-[10px] font-black uppercase tracking-widest text-brand-gold animate-fadeIn">{cartMsg}</p>}
           </div>
         </div>
       </div>
 
       <div className="px-6 md:px-12 lg:px-24">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-20">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 lg:gap-20 relative">
+
+          {/* Mobile Filter Backdrop */}
+          <div
+            className={`fixed inset-0 bg-brand-onyx/20 backdrop-blur-sm z-[190] lg:hidden transition-opacity duration-500 ${filterOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+            onClick={() => setFilterOpen(false)}
+          />
+
           {/* Sidebar Filters */}
-          <aside className={`w-full lg:w-72 shrink-0 space-y-12 shop-sidebar ${filterOpen ? 'block' : 'hidden lg:block'}`}>
-            <form onSubmit={applyFilters} className="space-y-12">
-              {/* Search */}
-              <div className="space-y-6">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-400 border-b border-neutral-100 pb-3">Search</h4>
-                <div className="flex items-center border-b border-neutral-200 focus-within:border-brand-onyx transition-all duration-500">
-                  <Search className="w-4 h-4 text-neutral-300 shrink-0" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Keywords..."
-                    className="flex-1 px-4 py-3 text-sm bg-transparent focus:outline-none placeholder:text-neutral-200"
-                    id="shop-search-input"
-                  />
-                </div>
+          <aside className={`fixed inset-y-0 left-0 z-[200] w-[85%] max-w-[360px] bg-white/95 backdrop-blur-3xl shadow-[20px_0_40px_rgba(0,0,0,0.1)] transform transition-transform duration-700 ease-[cubic-bezier(0.19,1,0.22,1)] lg:relative lg:translate-x-0 lg:z-0 lg:w-80 lg:bg-transparent lg:shadow-none lg:backdrop-blur-none shrink-0 ${filterOpen ? 'translate-x-0' : '-translate-x-full'} shop-sidebar overflow-y-auto lg:overflow-visible`}>
+            <div className="p-8 lg:p-0">
+              <div className="flex items-center justify-between lg:hidden mb-10">
+                <span className="text-lg font-serif font-black tracking-widest text-brand-onyx">Filters</span>
+                <button type="button" onClick={() => setFilterOpen(false)} className="p-3 bg-neutral-100 rounded-full text-brand-onyx hover:bg-neutral-200 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
               </div>
 
-              {/* Categories */}
-              <div className="space-y-6">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-400 border-b border-neutral-100 pb-3">Collection</h4>
-                <ul className="space-y-3">
-                  <li>
-                    <button type="button" onClick={() => setCategoryId('')} className={`text-[11px] uppercase tracking-widest w-full text-left py-1.5 transition-all ${!categoryId ? 'font-black text-brand-onyx translate-x-2' : 'text-neutral-400 hover:text-brand-onyx hover:translate-x-1'}`}>
-                      All Masterpieces
-                    </button>
-                  </li>
-                  {categories.map((cat) => (
-                    <li key={cat.id}>
-                      <button type="button" onClick={() => setCategoryId(cat.id)} className={`text-[11px] uppercase tracking-widest w-full text-left py-1.5 transition-all ${categoryId === cat.id ? 'font-black text-brand-onyx translate-x-2' : 'text-neutral-400 hover:text-brand-onyx hover:translate-x-1'}`}>
-                        {cat.name}
+              <form onSubmit={applyFilters} className="space-y-6">
+                {/* Search Widget */}
+                <div className="widget bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-400 mb-4">Search</h4>
+                  <div className="flex items-center bg-neutral-50 rounded-2xl px-4 py-3 focus-within:ring-2 ring-brand-onyx/10 transition-all">
+                    <Search className="w-4 h-4 text-brand-gold shrink-0" />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Keywords..."
+                      className="flex-1 px-3 py-1 text-xs font-medium bg-transparent focus:outline-none placeholder:text-neutral-300 text-brand-onyx"
+                      id="shop-search-input"
+                    />
+                  </div>
+                </div>
+
+                {/* Categories Widget */}
+                <div className="widget bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-400 mb-4">Collection</h4>
+                  <ul className="space-y-2">
+                    <li>
+                      <button type="button" onClick={() => setCategoryId('')} className={`text-[10px] font-bold uppercase tracking-widest w-full text-left py-2 px-4 rounded-xl transition-all ${!categoryId ? 'bg-brand-onyx text-white shadow-md' : 'text-neutral-500 hover:bg-neutral-50'}`}>
+                        All Masterpieces
                       </button>
                     </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Price range */}
-              <div className="space-y-6">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-400 border-b border-neutral-100 pb-3">Price Point</h4>
-                <div className="flex gap-4 items-center">
-                  <input type="number" min="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Min $" className="w-full bg-transparent border-b border-neutral-200 px-2 py-3 text-sm focus:outline-none focus:border-brand-onyx transition-colors" id="min-price" />
-                  <span className="text-neutral-300 text-xs shrink-0">—</span>
-                  <input type="number" min="0" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Max $" className="w-full bg-transparent border-b border-neutral-200 px-2 py-3 text-sm focus:outline-none focus:border-brand-onyx transition-colors" id="max-price" />
+                    {categories.map((cat) => (
+                      <li key={cat.id}>
+                        <button type="button" onClick={() => setCategoryId(cat.id)} className={`text-[10px] font-bold uppercase tracking-widest w-full text-left py-2 px-4 rounded-xl transition-all ${categoryId === cat.id ? 'bg-brand-onyx text-white shadow-md' : 'text-neutral-500 hover:bg-neutral-50'}`}>
+                          {cat.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
 
-              <button type="submit" className="w-full premium-btn text-[11px] py-4 bg-brand-onyx text-brand-cream hover:bg-black">Update Vault</button>
-            </form>
+                {/* Price Widget */}
+                <div className="widget bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50">
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-400 mb-4">Price Point</h4>
+                  <div className="flex gap-3 items-center">
+                    <div className="flex-1 bg-neutral-50 rounded-2xl px-4 py-3 focus-within:ring-2 ring-brand-onyx/10 transition-all flex items-center">
+                      <span className="text-neutral-400 text-xs font-bold mr-1">$</span>
+                      <input type="number" min="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Min" className="w-full bg-transparent text-xs font-medium focus:outline-none text-brand-onyx" id="min-price" />
+                    </div>
+                    <span className="text-neutral-300 font-bold">—</span>
+                    <div className="flex-1 bg-neutral-50 rounded-2xl px-4 py-3 focus-within:ring-2 ring-brand-onyx/10 transition-all flex items-center">
+                      <span className="text-neutral-400 text-xs font-bold mr-1">$</span>
+                      <input type="number" min="0" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Max" className="w-full bg-transparent text-xs font-medium focus:outline-none text-brand-onyx" id="max-price" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="widget pt-4">
+                  <button type="submit" className="w-full bg-brand-gold text-brand-onyx font-black text-[10px] uppercase tracking-[0.4em] py-5 rounded-full shadow-[0_10px_20px_rgba(197,163,93,0.3)] hover:bg-[#b08d4b] hover:shadow-[0_15px_30px_rgba(197,163,93,0.4)] hover:-translate-y-1 transition-all duration-300">
+                    Update Vault
+                  </button>
+                </div>
+              </form>
+            </div>
           </aside>
 
           {/* Product Grid */}
           <div className="flex-1" ref={gridRef}>
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-20">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-16">
                 {Array.from({ length: LIMIT }).map((_, i) => <SkeletonCard key={i} />)}
               </div>
             ) : products.length === 0 ? (
-              <div className="text-center py-40 space-y-6">
-                <p className="text-6xl font-serif text-neutral-100">✦</p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-400">The vault is currently empty</p>
-                <button onClick={clearFilters} className="text-[10px] font-bold uppercase tracking-widest text-brand-onyx border-b border-brand-onyx pb-1 hover:opacity-60 transition-opacity">Clear All Filters</button>
+              <div className="text-center py-40 space-y-8 bg-white/40 backdrop-blur-xl rounded-[3rem] border border-white shadow-sm mx-4">
+                <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
+                  <p className="text-4xl font-serif text-brand-gold">✦</p>
+                </div>
+                <div>
+                  <p className="text-[12px] font-black uppercase tracking-[0.4em] text-brand-onyx mb-3">The vault is currently empty</p>
+                  <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">We couldn't find any pieces matching your current selection. Try adjusting your filters.</p>
+                </div>
+                <button onClick={clearFilters} className="inline-block bg-brand-onyx text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-black transition-colors shadow-lg">Clear All Filters</button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-20">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-16">
                 {products.map((product) => (
                   <div key={product.id} className="group product-card">
-                    <Link to={`/product/${product.slug}`} className="block relative aspect-[4/5] overflow-hidden mb-8 bg-white rounded-sm">
-                      {product.images?.[0] ? (
-                        <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover transition-transform duration-[1.5s] ease-out group-hover:scale-110" loading="lazy" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-neutral-50">
-                          <span className="text-5xl text-neutral-100 italic font-serif">S</span>
-                        </div>
-                      )}
-                      
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-brand-onyx/0 group-hover:bg-brand-onyx/40 transition-all duration-700 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 p-8">
-                        <button 
+                    <div className="relative aspect-[4/5] overflow-hidden mb-6 bg-white rounded-[2rem] shadow-[0_8px_20px_rgba(0,0,0,0.03)] group-hover:shadow-[0_20px_40px_rgba(0,0,0,0.12)] transition-all duration-700">
+                      <Link to={`/product/${product.slug}`} className="block w-full h-full">
+                        {product.images?.[0] ? (
+                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover transition-transform duration-[2s] ease-[cubic-bezier(0.19,1,0.22,1)] group-hover:scale-110" loading="lazy" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-neutral-50">
+                            <span className="text-6xl text-neutral-200 italic font-serif">S</span>
+                          </div>
+                        )}
+                      </Link>
+
+                      {/* iOS style floating add to cart pill */}
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[90%] opacity-0 translate-y-8 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] z-10">
+                        <button
                           onClick={(e) => { e.preventDefault(); handleAddToCart(product); }}
                           disabled={addingId === product.id || product.stock === 0}
-                          className="bg-brand-cream text-brand-onyx w-full py-4 text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-white transition-colors flex items-center justify-center gap-3 translate-y-4 group-hover:translate-y-0 duration-700"
+                          className="w-full bg-white/95 backdrop-blur-md border border-white/20 text-brand-onyx py-3.5 rounded-full text-[9px] font-black uppercase tracking-[0.3em] hover:bg-brand-onyx hover:text-white transition-all flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(0,0,0,0.15)] disabled:opacity-50"
                         >
-                          <ShoppingBag className="w-4 h-4" />
+                          <ShoppingBag className="w-3.5 h-3.5" />
                           {addingId === product.id ? 'Adding...' : 'Add to Vault'}
                         </button>
                       </div>
 
                       {product.stock === 0 && (
-                        <div className="absolute top-4 left-4 bg-white/90 px-3 py-1.5 backdrop-blur-md">
+                        <div className="absolute top-4 left-4 bg-white/90 px-4 py-2 rounded-full backdrop-blur-md shadow-sm">
                           <span className="text-[9px] font-black uppercase tracking-[0.3em] text-neutral-400">Reserved</span>
                         </div>
                       )}
-                    </Link>
-                    
-                    <div className="text-center space-y-3">
+                    </div>
+
+                    <div className="text-center px-4 space-y-3">
                       {product.category?.name && (
-                        <span className="text-[9px] font-bold uppercase tracking-[0.5em] text-brand-gold block mb-1">
+                        <span className="text-[8px] font-black uppercase tracking-[0.5em] text-brand-gold block mb-1">
                           {product.category.name}
                         </span>
                       )}
                       <Link to={`/product/${product.slug}`}>
-                        <h3 className="text-sm font-bold uppercase tracking-[0.2em] hover:text-brand-gold transition-colors leading-relaxed">
+                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-brand-onyx hover:text-brand-gold transition-colors leading-relaxed line-clamp-1">
                           {product.name}
                         </h3>
                       </Link>
-                      <p className="text-lg font-serif text-brand-onyx">${Number(product.price).toLocaleString()}</p>
+                      <p className="text-lg font-serif italic text-neutral-500">${Number(product.price).toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
@@ -360,35 +394,35 @@ export const Shop = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-8 mt-32 border-t border-neutral-100 pt-12">
-                <button 
-                  onClick={() => { setPage(Math.max(1, page - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
-                  disabled={page === 1} 
-                  className="p-4 border border-transparent hover:border-neutral-200 transition-all disabled:opacity-0"
+              <div className="flex items-center justify-center gap-6 mt-24">
+                <button
+                  onClick={() => { setPage(Math.max(1, page - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  disabled={page === 1}
+                  className="p-4 bg-white rounded-full shadow-sm border border-neutral-100 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-sm"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4 text-brand-onyx" />
                 </button>
-                <div className="flex gap-4">
+                <div className="flex gap-2 bg-white rounded-full shadow-sm border border-neutral-100 p-2">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     const p = page <= 3 ? i + 1 : page + i - 2;
                     if (p > totalPages) return null;
                     return (
-                      <button 
-                        key={p} 
-                        onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
-                        className={`w-12 h-12 text-[11px] font-black transition-all ${p === page ? 'bg-brand-onyx text-brand-cream' : 'text-neutral-400 hover:text-brand-onyx'}`}
+                      <button
+                        key={p}
+                        onClick={() => { setPage(p); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className={`w-10 h-10 rounded-full text-[10px] font-black transition-all ${p === page ? 'bg-brand-onyx text-white shadow-md' : 'text-neutral-400 hover:bg-neutral-50 hover:text-brand-onyx'}`}
                       >
                         {p < 10 ? `0${p}` : p}
                       </button>
                     );
                   })}
                 </div>
-                <button 
-                  onClick={() => { setPage(Math.min(totalPages, page + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
-                  disabled={page === totalPages} 
-                  className="p-4 border border-transparent hover:border-neutral-200 transition-all disabled:opacity-0"
+                <button
+                  onClick={() => { setPage(Math.min(totalPages, page + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  disabled={page === totalPages}
+                  className="p-4 bg-white rounded-full shadow-sm border border-neutral-100 hover:shadow-md transition-all disabled:opacity-30 disabled:hover:shadow-sm"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4 text-brand-onyx" />
                 </button>
               </div>
             )}

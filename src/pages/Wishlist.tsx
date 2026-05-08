@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, ShoppingBag, Heart, ArrowRight } from 'lucide-react';
 import { useWishlistStore } from '../store/useWishlistStore';
@@ -11,8 +11,18 @@ export const Wishlist = () => {
   const { items, loading, fetchWishlist, toggleWishlist } = useWishlistStore();
   const { addItem } = useCartStore();
   const { isAuthenticated } = useAuthStore();
+  const [removingId, setRemovingId] = useState<string | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleRemove = async (productId: string) => {
+    setRemovingId(productId);
+    try {
+      await toggleWishlist(productId);
+    } finally {
+      setRemovingId(null);
+    }
+  };
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -90,6 +100,11 @@ export const Wishlist = () => {
                     alt={item.product.name} 
                     className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110"
                   />
+                  {removingId === item.product.id && (
+                    <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10">
+                      <div className="w-6 h-6 border-2 border-brand-onyx border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-brand-onyx/40 opacity-0 group-hover:opacity-100 transition-opacity duration-700 flex flex-col items-center justify-center p-8">
                     <button 
                       onClick={() => handleMoveToCart(item.product.id)}
@@ -98,10 +113,11 @@ export const Wishlist = () => {
                       <ShoppingBag className="w-4 h-4" /> Add to Vault
                     </button>
                     <button 
-                      onClick={() => toggleWishlist(item.product.id)}
-                      className="mt-4 text-[9px] font-bold uppercase tracking-[0.4em] text-brand-cream hover:text-white transition-colors flex items-center gap-2 translate-y-4 group-hover:translate-y-0 duration-700 delay-75"
+                      onClick={() => handleRemove(item.product.id)}
+                      disabled={removingId === item.product.id}
+                      className="mt-4 text-[9px] font-bold uppercase tracking-[0.4em] text-brand-cream hover:text-white transition-colors flex items-center gap-2 translate-y-4 group-hover:translate-y-0 duration-700 delay-75 disabled:opacity-50"
                     >
-                      <Trash2 className="w-3 h-3" /> Remove Piece
+                      <Trash2 className="w-3 h-3" /> {removingId === item.product.id ? 'Removing...' : 'Remove Piece'}
                     </button>
                   </div>
                 </div>
