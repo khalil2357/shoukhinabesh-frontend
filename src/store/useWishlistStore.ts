@@ -47,7 +47,19 @@ export const useWishlistStore = create<WishlistState>((set, get) => ({
       
       // Refresh the wishlist after toggle
       await get().fetchWishlist();
-      
+
+      // After refreshing, find the product in the wishlist to craft a toast message
+      const items = get().items || [];
+      const exists = items.some(item => item.productId === productId);
+      const added = !!exists;
+
+      try {
+        const msg = added ? 'ADDED TO WISHLIST' : 'REMOVED FROM WISHLIST';
+        window.dispatchEvent(new CustomEvent('show-nav-message', { detail: { message: msg, type: added ? 'wishlist' : 'wishlist-remove' } }));
+      } catch (e) {
+        // ignore
+      }
+
       return data.added;
     } catch (error) {
       console.error('Error toggling wishlist:', error);

@@ -154,7 +154,9 @@ export const ProductDetail = () => {
     setAdding(true);
     try {
       await addItem(product.id, quantity);
-      showToast('Vault Updated', `${quantity} masterpiece${quantity > 1 ? 's' : ''} secured in your selection.`, 'success');
+      try {
+        window.dispatchEvent(new CustomEvent('show-nav-message', { detail: { message: 'ADDED TO VAULT', type: 'vault' } }));
+      } catch {}
     } catch (error: any) {
       if (error?.response?.status === 401) {
         useAuthStore.getState().logout();

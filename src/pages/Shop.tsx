@@ -171,6 +171,12 @@ export const Shop = () => {
     try {
       await addItem(product.id, 1);
       setCartMsg('Added to cart!');
+      // Dispatch a global event to show a brief message under the navbar logo
+      try {
+        window.dispatchEvent(new CustomEvent('show-nav-message', { detail: { message: 'ADDED TO VAULT', type: 'vault' } }));
+      } catch (e) {
+        // ignore
+      }
       window.setTimeout(() => setCartMsg(''), 2500);
     } catch (error: any) {
       if (error?.response?.status === 401) {

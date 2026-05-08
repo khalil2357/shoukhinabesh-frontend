@@ -23,12 +23,19 @@ export const Navbar = () => {
   const navRef = useRef<HTMLElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
+  const centerRef = useRef<HTMLDivElement>(null);
   const searchOverlayRef = useRef<HTMLDivElement>(null);
   const cartOverlayRef = useRef<HTMLDivElement>(null);
   const wishlistOverlayRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
+  const cartBtnRef = useRef<HTMLButtonElement>(null);
+  const wishBtnRef = useRef<HTMLButtonElement>(null);
+  const cartCountRef = useRef<HTMLSpanElement>(null);
+  const wishCountRef = useRef<HTMLSpanElement>(null);
+  const [navMessage, setNavMessage] = useState<string | null>(null);
+  const navMessageTimeout = useRef<any>(null);
 
   const { cart, updateItem, removeItem: removeCartItem, addItem } = useCartStore();
   const { items: wishlistItems, toggleWishlist, fetchWishlist } = useWishlistStore();
@@ -138,6 +145,61 @@ export const Navbar = () => {
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
+  // Show a brief message under the logo (originates from navbar)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ev = e as CustomEvent<{ message: string; type?: string }>;
+      const msg = ev?.detail?.message || '';
+      const type = ev?.detail?.type || '';
+      if (!msg) return;
+
+      // set message state
+      setNavMessage(msg);
+
+      // animate navbar center expand briefly
+      if (centerRef.current) {
+        gsap.killTweensOf(centerRef.current);
+        gsap.to(centerRef.current, { scale: 1.02, duration: 0.12, ease: 'power2.out' });
+      }
+
+      // clear any existing timers
+      if (navMessageTimeout.current) clearTimeout(navMessageTimeout.current);
+      navMessageTimeout.current = setTimeout(() => {
+        // hide message
+        setNavMessage(null);
+        if (centerRef.current) gsap.to(centerRef.current, { scale: 1, duration: 0.18, ease: 'power2.inOut' });
+      }, 2200);
+      // Glow icon for a moment
+      try {
+        if (type === 'vault' && cartBtnRef.current) {
+          const el = cartBtnRef.current;
+          const ct = cartCountRef.current;
+          const tl = gsap.timeline();
+          tl.to(el, { scale: 1.08, boxShadow: '0 10px 30px rgba(197,163,93,0.28)', duration: 0.16, ease: 'power2.out' })
+            .to(el, { scale: 1, boxShadow: '0 0px 0px rgba(0,0,0,0)', duration: 0.5, ease: 'power2.in' });
+          if (ct) gsap.fromTo(ct, { scale: 1 }, { scale: 1.08, duration: 0.16, yoyo: true, repeat: 1, ease: 'power2.out' });
+        }
+
+        if ((type === 'wishlist' || type === 'wishlist-remove') && wishBtnRef.current) {
+          const el = wishBtnRef.current;
+          const ct = wishCountRef.current;
+          const tl = gsap.timeline();
+          tl.to(el, { scale: 1.08, boxShadow: '0 10px 30px rgba(197,163,93,0.28)', duration: 0.16, ease: 'power2.out' })
+            .to(el, { scale: 1, boxShadow: '0 0px 0px rgba(0,0,0,0)', duration: 0.5, ease: 'power2.in' });
+          if (ct) gsap.fromTo(ct, { scale: 1 }, { scale: 1.08, duration: 0.16, yoyo: true, repeat: 1, ease: 'power2.out' });
+        }
+      } catch (err) {
+        // ignore animation errors
+      }
+    };
+
+    window.addEventListener('show-nav-message', handler as EventListener);
+    return () => {
+      window.removeEventListener('show-nav-message', handler as EventListener);
+      if (navMessageTimeout.current) clearTimeout(navMessageTimeout.current);
+    };
+  }, []);
+
   const handleLogout = () => {
     logout();
     reset();
@@ -185,6 +247,7 @@ export const Navbar = () => {
         } flex items-center justify-center px-4 md:px-10`}
       >
         <div 
+          ref={centerRef}
           className={`w-full max-w-[1440px] px-8 md:px-16 flex justify-between items-center transition-all duration-700 ${
             scrolled 
               ? 'bg-brand-onyx/95 backdrop-blur-3xl border border-white/5 rounded-full py-3 shadow-2xl scale-[0.98]' 
@@ -222,12 +285,20 @@ export const Navbar = () => {
 
           {/* Logo (Center) - Refined Ribbon Style */}
           <div ref={logoRef} className="flex-none lg:absolute lg:left-1/2 lg:-translate-x-1/2">
-            <Link
-              to="/"
-              className={`text-sm md:text-base font-serif font-black tracking-[0.4em] uppercase transition-all duration-700 ${logoColorClass} ${scrolled ? 'scale-90' : 'scale-100'}`}
-            >
-              SHOUKHINABESH
-            </Link>
+              {navMessage ? (
+                <div className="hidden lg:flex items-center justify-center w-full">
+                  <div className="px-6 py-3 rounded-full bg-brand-onyx text-white font-black text-sm tracking-widest shadow-[0_12px_40px_rgba(197,163,93,0.12)]" style={{backdropFilter: 'blur(6px)'}}>
+                    {navMessage}
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  to="/"
+                  className={`text-sm md:text-base font-serif font-black tracking-[0.4em] uppercase transition-all duration-700 ${logoColorClass} ${scrolled ? 'scale-90' : 'scale-100'}`}
+                >
+                  SHOUKHINABESH
+                </Link>
+              )}
           </div>
 
           {/* Right actions (Desktop only) */}
@@ -242,24 +313,26 @@ export const Navbar = () => {
               </button>
 
               <button
+                ref={wishBtnRef}
                 onClick={() => setWishlistOpen(true)}
                 className={`nav-icon p-2 ${iconColorClass} hover:text-brand-gold transition-all relative hover:bg-neutral-500/5 rounded-full`}
               >
                 <Heart className={`w-[18px] h-[18px] ${wishlistItems.length > 0 ? 'fill-brand-gold text-brand-gold' : ''}`} />
                 {wishlistItems.length > 0 && (
-                  <span className="absolute top-1 right-1 w-3 h-3 bg-brand-gold text-brand-onyx text-[7px] font-black rounded-full flex items-center justify-center">
+                  <span ref={wishCountRef} className="absolute top-1 right-1 w-3 h-3 bg-brand-gold text-brand-onyx text-[7px] font-black rounded-full flex items-center justify-center">
                     {wishlistItems.length}
                   </span>
                 )}
               </button>
 
               <button
+                ref={cartBtnRef}
                 onClick={() => setCartOpen(true)}
                 className={`nav-icon p-2 ${iconColorClass} hover:text-brand-gold transition-all relative hover:bg-neutral-500/5 rounded-full`}
               >
                 <ShoppingBag className="w-[18px] h-[18px]" />
                 {itemCount > 0 && (
-                  <span className="absolute top-1 right-1 w-3 h-3 bg-brand-gold text-brand-onyx text-[7px] font-black rounded-full flex items-center justify-center">
+                  <span ref={cartCountRef} className="absolute top-1 right-1 w-3 h-3 bg-brand-gold text-brand-onyx text-[7px] font-black rounded-full flex items-center justify-center">
                     {itemCount > 99 ? '99' : itemCount}
                   </span>
                 )}
@@ -326,6 +399,9 @@ export const Navbar = () => {
           </div>
         </div>
       </nav>
+
+      {/* Dynamic island toast (positioned absolutely, controlled via GSAP) */}
+      {/* toast removed — using nav message under logo instead */}
 
       {/* iOS-Style Floating Search Bar */}
       <div 
